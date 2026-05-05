@@ -56,7 +56,6 @@ def convert_ny_to_paris(time_str):
         return "Soon"
 
 def get_events_json():
-    """Source 1 : Rapide et propre"""
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
@@ -67,24 +66,30 @@ def get_events_json():
         return []
 
 def get_events_scrape():
-    """Source 2 : Complète (Scraping)"""
     url = "https://www.forexfactory.com/calendar"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
         resp = requests.get(url, headers=headers, timeout=15)
         soup = BeautifulSoup(resp.text, "lxml")
         events = []
         curr_time = ""
+        
         for row in soup.select("tr.calendar__row"):
+            # Extraction de l'heure
             time_cell = row.select_one("td.calendar__time")
-            if time_cell and time_cell.text.strip(): curr_time = time_cell.text.strip()
+            if time_cell and time_cell.text.strip(): 
+                curr_time = time_cell.text.strip()
             
+            # Filtrage USD uniquement
             currency = row.select_one("td.calendar__currency")
-            if not currency or "USD" not in currency.text: continue
+            if not currency or "USD" not in currency.text: 
+                continue
             
+            # Filtrage Impact (Rouge et Orange)
             impact_span = row.select_one("td.calendar__impact span")
             impact_class = " ".join(impact_span.get("class", [])) if impact_span else ""
-            if "high" not in impact_class and "medium" not in impact_class: continue
+            if "high" not in impact_class and "medium" not in impact_class: 
+                continue
 
             title = row.select_one("span.calendar__event-title").text.strip()
             forecast = row.select_one("td.calendar__forecast").text.strip()
@@ -98,7 +103,8 @@ def get_events_scrape():
                 "previous": previous
             })
         return events
-    except:
+    except Exception as e:
+        print(f"Erreur scraping: {e}")
         return []
 
 def build_message(events):
@@ -112,6 +118,7 @@ def build_message(events):
     if not events:
         lines += ["🚫 Aucun événement majeur aujourd'hui.", "Focus sur le flux technique US30."]
     else:
+        # Tri des événements
         high = [e for e in events if e["impact"] == "High"]
         med = [e for e in events if e["impact"] == "Medium"]
 
@@ -132,8 +139,9 @@ def build_message(events):
                 t = convert_ny_to_paris(e.get("time_ny") or e.get("time"))
                 name = e.get("title") or e.get("name")
                 lines.append(f"• `{t}` | {name}")
+                # Explication pour les news impact moyen (sauf discours répétitifs)
                 exp = get_explainer(name)
-                if exp and "Bowman" not in name and "Barr" not in name: # Évite de spammer sur les discours
+                if exp and "Speaks" not in name:
                      lines.append(f"  >> _{exp}_")
             lines.append("")
 
@@ -150,14 +158,29 @@ def build_message(events):
     return "\n".join(lines)
 
 def main():
-    # On tente le JSON, si on a moins de 5 events (souvent signe qu'il manque les discours), on scrape
+    # On tente le JSON en premier
     events = get_events_json()
-    if len(events) < 5:
+    
+    # SI moins de 8 events OU pas de discours détectés, on force le scraping complet
+    # Aujourd'hui le 5 mai, il y a beaucoup de news, donc 8 est un bon seuil.
+    discours_detecte = any("Speaks" in str(e.values()) for e in events)
+    
+    if len(events) < 8 or not discours_detecte:
+        print("Source JSON incomplète. Passage au Scraping...")
         events = get_events_scrape()
     
     msg = build_message(events)
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
+    
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID, 
+        "text": msg, 
+        "parse_mode": "Markdown", 
+        "disable_web_page_preview": True
+    }
+    
+    r = requests.post(url, json=payload, timeout=10)
+    print(f"Statut Telegram: {r.status_code}")
 
 if __name__ == "__main__":
     main()
