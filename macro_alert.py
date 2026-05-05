@@ -10,35 +10,35 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
 EVENT_EXPLAINERS = {
-    "non-farm": "Chiffre cle du mois. Dessus consensus = US30 monte fort",
-    "nfp": "Chiffre cle du mois. Dessus consensus = US30 monte fort",
+    "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
+    "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
     "payroll": "Emploi US. Bon chiffre = economie solide = haussier",
-    "adp": "Avant-gout du NFP. Donne le ton avant vendredi",
-    "jolts": "Offres emploi. Beaucoup = Fed garde taux hauts = baissier actions",
-    "jobless claims": "Chomage hebdo. Hausse = ralentissement eco = baissier",
-    "unemployment": "Taux chomage. Hausse = mauvais pour economie",
-    "cpi": "Inflation. Eleve = Fed ne baisse pas taux = baissier actions",
-    "consumer price": "Inflation. Eleve = Fed ne baisse pas taux = baissier actions",
-    "pce": "Inflation preferee Fed. Cle avant chaque FOMC",
-    "ppi": "Inflation producteurs. Precurseur du CPI",
-    "producer price": "Inflation producteurs. Precurseur du CPI",
-    "fomc": "Decision taux Fed. Volatilite extreme garantie",
-    "interest rate": "Decision taux Fed. Volatilite extreme garantie",
-    "fed": "Discours Fed. Chaque mot peut bouger le marche",
-    "powell": "Discours Powell. Volatilite forte pendant et apres",
-    "warsh": "Nouveau president Fed. Ses mots donnent le cap monetaire",
-    "ism": "Activite eco. >50 = expansion haussier / <50 = contraction baissier",
-    "pmi": "Activite eco. >50 = expansion haussier / <50 = contraction baissier",
-    "gdp": "Croissance US. Bon chiffre = haussier pour les actions",
-    "retail sales": "Consommation menages. Moteur de l economie US",
-    "consumer confidence": "Moral menages. Indicateur avance conso",
-    "michigan": "Moral menages. Indicateur avance conso",
-    "durable goods": "Commandes industrie. Mesure investissement entreprises",
-    "beige book": "Rapport Fed economie reelle. Ton du prochain FOMC",
-    "fomc member": "Discours membre Fed. Peut signaler changement politique",
-    "trade balance": "Balance commerciale. Deficit = dollar sous pression",
-    "new home sales": "Immobilier neuf. Sensible aux taux d interet",
-    "building permits": "Permis construire. Indicateur avance immobilier",
+    "adp": "Avant-gout du NFP vendredi. Donne le ton en debut de semaine",
+    "jolts": "Offres emploi. Beaucoup = marche tendu = Fed garde taux hauts",
+    "jobless claims": "Inscriptions chomage hebdo. Hausse = signal ralentissement eco",
+    "unemployment": "Taux chomage. Hausse = mauvais pour economie = baissier",
+    "cpi": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
+    "consumer price": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
+    "pce": "Inflation preferee Fed. Tres surveillee avant chaque reunion FOMC",
+    "ppi": "Inflation producteurs. Precurseur du CPI a venir",
+    "producer price": "Inflation producteurs. Precurseur du CPI a venir",
+    "fomc": "Decision taux Fed. Catalyseur maximal. Volatilite extreme garantie",
+    "interest rate": "Decision taux Fed. Catalyseur maximal. Volatilite extreme garantie",
+    "fed": "Discours membre Fed. Chaque mot peut bouger le marche",
+    "powell": "Discours Powell. Forte volatilite pendant et apres",
+    "warsh": "Nouveau president Fed. Ses premiers mots donnent le cap monetaire",
+    "ism": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
+    "pmi": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
+    "gdp": "Croissance US. Bon chiffre = economie solide = haussier pour les actions",
+    "retail sales": "Consommation menages. Moteur principal de l economie US",
+    "consumer confidence": "Moral menages. Indicateur avance de la consommation a venir",
+    "michigan": "Moral menages. Indicateur avance de la consommation a venir",
+    "durable goods": "Commandes industrielles. Mesure l investissement des entreprises",
+    "beige book": "Rapport Fed sur l economie reelle. Donne le ton du prochain FOMC",
+    "fomc member": "Discours membre Fed. Peut signaler un changement de politique",
+    "trade balance": "Balance commerciale. Deficit eleve = dollar sous pression",
+    "new home sales": "Immobilier neuf. Tres sensible aux taux d interet",
+    "building permits": "Permis construire. Indicateur avance du secteur immobilier",
 }
 
 
@@ -149,7 +149,7 @@ def get_events():
 
 def convert_ny_to_paris(time_str):
     if not time_str:
-        return None
+        return "?"
     try:
         now_ny = datetime.now(NY_TZ)
         t_clean = time_str.lower().replace(" ", "")
@@ -158,11 +158,11 @@ def convert_ny_to_paris(time_str):
         elif ":" in t_clean:
             t = datetime.strptime(t_clean, "%H:%M")
         else:
-            return None
+            return time_str
         dt_ny = now_ny.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
         return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
     except Exception:
-        return None
+        return time_str
 
 
 def build_message(events):
@@ -172,13 +172,12 @@ def build_message(events):
             "juil", "aout", "sep", "oct", "nov", "dec"]
     date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
 
-    # Filtrer les events sans heure valide
-    high = [e for e in events if e["high_impact"] and convert_ny_to_paris(e["time_ny"])]
-    medium = [e for e in events if not e["high_impact"] and convert_ny_to_paris(e["time_ny"])]
-    allday = [e for e in events if not convert_ny_to_paris(e["time_ny"])]
+    high = [e for e in events if e["high_impact"]]
+    medium = [e for e in events if not e["high_impact"]]
 
     lines = [
         f"US30 Briefing - {date_str}",
+        "Heure Paris",
         "",
     ]
 
@@ -190,8 +189,7 @@ def build_message(events):
         ]
     else:
         if high:
-            lines.append("FORT IMPACT")
-            lines.append("")
+            lines.append("--- FORT IMPACT ---")
             for e in high:
                 paris = convert_ny_to_paris(e["time_ny"])
                 lines.append(f"{paris} | {e['name']}")
@@ -210,8 +208,7 @@ def build_message(events):
                 lines.append("")
 
         if medium:
-            lines.append("IMPACT MOYEN")
-            lines.append("")
+            lines.append("--- IMPACT MOYEN ---")
             for e in medium:
                 paris = convert_ny_to_paris(e["time_ny"])
                 cns = f" (cns: {e['forecast']})" if e["forecast"] else ""
@@ -219,13 +216,6 @@ def build_message(events):
                 explainer = get_explainer(e["name"])
                 if explainer:
                     lines.append(f"  >> {explainer}")
-            lines.append("")
-
-        if allday:
-            lines.append("AUTRES NEWS")
-            lines.append("")
-            for e in allday:
-                lines.append(f"  - {e['name']}")
             lines.append("")
 
     lines += [
