@@ -10,36 +10,57 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
 def convert_ny_to_paris(time_str):
-    if not time_str or ":" not in time_str: return "Journée"
+    """Force la conversion de l'heure peu importe le format (10:30am, 14:30, etc.)"""
+    if not time_str or time_str.lower() in ["all day", "tentative"]:
+        return "Journée"
+    
     try:
+        # Nettoyage du texte (ex: "10:30am" -> "10:30AM")
+        t_clean = time_str.replace(" ", "").upper()
         now_ny = datetime.now(NY_TZ)
-        t_clean = time_str.lower().replace(" ", "")
-        fmt = "%I:%M%p" if ("am" in t_clean or "pm" in t_clean) else "%H:%M"
-        t = datetime.strptime(t_clean, fmt)
+        
+        # Test format 12h (AM/PM)
+        if "AM" in t_clean or "PM" in t_clean:
+            t = datetime.strptime(t_clean, "%I:%M%p")
+        # Test format 24h
+        else:
+            t = datetime.strptime(t_clean, "%H:%M")
+            
         dt_ny = now_ny.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
         return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
-    except: return "Soon"
+    except:
+        # Si le format est juste "10am" sans les minutes
+        try:
+            t_clean = time_str.replace(" ", "").upper()
+            if "AM" in t_clean or "PM" in t_clean:
+                t = datetime.strptime(t_clean, "%I%p")
+                dt_ny = datetime.now(NY_TZ).replace(hour=t.hour, minute=0)
+                return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
+        except:
+            pass
+        return "Journée"
 
 def get_events():
-    # On utilise un lien direct vers le flux complet sans filtrage agressif
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=15)
         data = resp.json()
         today = datetime.now(NY_TZ).strftime("%Y-%m-%d")
-        # On prend TOUT ce qui est USD pour aujourd'hui
         return [e for e in data if e.get("country") == "USD" and e.get("date", "")[:10] == today]
-    except: return []
+    except:
+        return []
 
 def main():
     events = get_events()
     now = datetime.now(PARIS_TZ)
-    date_str = now.strftime("%A %d %B %Y").replace("Tuesday", "Mardi").replace("May", "Mai")
+    
+    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+    mois = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
 
     lines = [f"🚀 *US30 Briefing — {date_str}*", "_Heure de Paris_", ""]
 
     high = [e for e in events if e["impact"] == "High"]
-    # On force l'affichage de TOUS les impacts Medium et Low pour voir si ça débloque
     med = [e for e in events if e["impact"] in ["Medium", "Low"]]
 
     if high:
