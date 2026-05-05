@@ -136,14 +136,14 @@ def get_events():
     print("Source 1: ForexFactory CDN...")
     events = get_events_forexfactory_cdn()
     if events is not None:
-        print(f"   OK {len(events)} events USD")
+        print(f"OK {len(events)} events USD")
         return events
     print("Source 2: ForexFactory scraping...")
     events = get_events_scrape()
     if events is not None:
-        print(f"   OK {len(events)} events USD")
+        print(f"OK {len(events)} events USD")
         return events
-    print("   Aucune source disponible")
+    print("Aucune source disponible")
     return []
 
 
