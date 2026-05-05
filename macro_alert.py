@@ -176,7 +176,7 @@ def build_message(events):
     medium = [e for e in events if not e["high_impact"]]
 
     lines = [
-        f"US30 Briefing - {date_str}",
+        f"TEST-LOG-NOUVEAU-CODE - {date_str}",
         "Heure Paris",
         "",
     ]
