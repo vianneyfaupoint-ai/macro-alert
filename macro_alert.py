@@ -220,8 +220,8 @@ def build_message(events):
 
     lines += [
         "--------------------",
-        "Ouverture : 14h30 Paris",
-        "Fenetre   : 14h30 -> 15h30",
+        "Ouverture : 15h30 Paris",
+        "Fenetre   : 15h30 -> 15h30",
         "ATH US30  : 50 539 pts",
         "",
         "Watch : Iran - Detroit - Petrole - Trump",
