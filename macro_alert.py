@@ -2,36 +2,35 @@ import os
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from bs4 import BeautifulSoup
 
-# Récupération des secrets GitHub
+# Config
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-
-# Fuseaux horaires
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Dictionnaire des explications pour le trading US30
 EVENT_EXPLAINERS = {
-    "non-farm": "Chiffre majeur. > consensus = US30 haussier (économie forte)",
-    "nfp": "Chiffre majeur. > consensus = US30 haussier (économie forte)",
+    "non-farm": "Chiffre majeur. > consensus = US30 haussier",
+    "nfp": "Chiffre majeur. > consensus = US30 haussier",
     "payroll": "Emploi US. Bon chiffre = économie solide = haussier",
-    "adp": "Avant-goût du NFP. Donne le ton du marché de l'emploi",
+    "adp": "Avant-goût du NFP. Donne le ton du marché",
     "jolts": "Offres d'emploi. Élevé = Fed peut rester restrictive",
     "jobless claims": "Chômage hebdo. Hausse = signal de ralentissement",
-    "unemployment": "Taux de chômage. Hausse = signe de faiblesse économique",
-    "cpi": "Inflation. Élevée = Fed garde les taux hauts = pression baissière",
-    "consumer price": "Inflation. Élevée = Fed garde les taux hauts = pression baissière",
-    "pce": "Inflation préférée de la Fed. Très surveillé avant le FOMC",
-    "ppi": "Inflation producteurs. Indicateur avancé du CPI",
+    "unemployment": "Taux de chômage. Hausse = mauvais pour l'indice",
+    "cpi": "Inflation. Élevée = Pression baissière sur l'US30",
+    "consumer price": "Inflation. Élevée = Pression baissière sur l'US30",
+    "pce": "Inflation préférée de la Fed. Très surveillé",
+    "ppi": "Inflation producteurs. Précurseur du CPI",
     "fomc": "Décision Fed. Volatilité maximale garantie",
-    "interest rate": "Décision taux. Impact direct sur le coût du crédit",
-    "powell": "Discours Powell. Chaque mot peut faire dévisser ou décoller l'indice",
+    "interest rate": "Décision taux. Impact direct sur le marché",
+    "powell": "Discours Powell. Attention forte volatilité",
     "ism": "Activité éco. > 50 = Expansion. < 50 = Contraction",
     "pmi": "Activité éco. > 50 = Expansion. < 50 = Contraction",
-    "gdp": "Croissance US. Bon chiffre = moteur pour les actions",
+    "gdp": "Croissance US. Bon chiffre = haussier actions",
     "retail sales": "Consommation. Moteur principal de l'économie US",
-    "michigan": "Moral des ménages. Indicateur de consommation future",
+    "michigan": "Moral des ménages. Indicateur de consommation",
+    "confidence": "Confiance des consommateurs. Impacte la demande",
 }
 
 def get_explainer(event_name):
@@ -42,96 +41,107 @@ def get_explainer(event_name):
     return None
 
 def convert_ny_to_paris(time_str):
-    """Convertit l'heure de ForexFactory (NY) en heure de Paris."""
     if not time_str or ":" not in time_str:
         return "Journée"
     try:
         now_ny = datetime.now(NY_TZ)
         t_clean = time_str.lower().replace(" ", "")
-        
-        # Gestion format 10:30am ou 14:30
         if "am" in t_clean or "pm" in t_clean:
             t = datetime.strptime(t_clean, "%I:%M%p")
         else:
             t = datetime.strptime(t_clean, "%H:%M")
-            
         dt_ny = now_ny.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
         return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
     except:
-        return "Bientôt"
+        return "Soon"
 
-def get_events():
-    """Récupère les événements du jour via le CDN de ForexFactory."""
+def get_events_json():
+    """Source 1 : Rapide et propre"""
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
-        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
+        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
         data = resp.json()
-        
-        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        today = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        return [e for e in data if e.get("country") == "USD" and e.get("date", "")[:10] == today]
+    except:
+        return []
+
+def get_events_scrape():
+    """Source 2 : Complète (Scraping)"""
+    url = "https://www.forexfactory.com/calendar"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(resp.text, "lxml")
         events = []
-        
-        for e in data:
-            # On ne garde que l'USD et les news du jour (Heure NY)
-            if e.get("country") == "USD" and e.get("date", "")[:10] == today_str:
-                events.append({
-                    "time_ny": e.get("time", ""),
-                    "name": e.get("title", ""),
-                    "impact": e.get("impact", ""),
-                    "forecast": e.get("forecast", ""),
-                    "previous": e.get("previous", ""),
-                    "actual": e.get("actual", "")
-                })
+        curr_time = ""
+        for row in soup.select("tr.calendar__row"):
+            time_cell = row.select_one("td.calendar__time")
+            if time_cell and time_cell.text.strip(): curr_time = time_cell.text.strip()
+            
+            currency = row.select_one("td.calendar__currency")
+            if not currency or "USD" not in currency.text: continue
+            
+            impact_span = row.select_one("td.calendar__impact span")
+            impact_class = " ".join(impact_span.get("class", [])) if impact_span else ""
+            if "high" not in impact_class and "medium" not in impact_class: continue
+
+            title = row.select_one("span.calendar__event-title").text.strip()
+            forecast = row.select_one("td.calendar__forecast").text.strip()
+            previous = row.select_one("td.calendar__previous").text.strip()
+
+            events.append({
+                "time_ny": curr_time,
+                "title": title,
+                "impact": "High" if "high" in impact_class else "Medium",
+                "forecast": forecast,
+                "previous": previous
+            })
         return events
-    except Exception as ex:
-        print(f"Erreur lors de la récupération : {ex}")
+    except:
         return []
 
 def build_message(events):
     now = datetime.now(PARIS_TZ)
-    date_str = now.strftime("%A %d %B %Y")
-    
-    # Traduction rapide du jour pour le style
-    translations = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
-                    "Thursday": "Jeudi", "Friday": "Vendredi", "May": "Mai"}
-    for eng, fra in translations.items():
-        date_str = date_str.replace(eng, fra)
+    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+    mois = ["Jan", "Fév", "Mars", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+    date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
 
-    lines = [
-        f"🚀 *US30 Briefing — {date_str}*",
-        "_Heure de Paris_",
-        ""
-    ]
+    lines = [f"🚀 *US30 Briefing — {date_str}*", "_Heure de Paris_", ""]
 
     if not events:
-        lines += ["🚫 Aucun événement macro majeur aujourd'hui.", "Séance pilotée par le flux technique."]
+        lines += ["🚫 Aucun événement majeur aujourd'hui.", "Focus sur le flux technique US30."]
     else:
-        # Tri par impact
         high = [e for e in events if e["impact"] == "High"]
-        medium = [e for e in events if e["impact"] == "Medium"]
+        med = [e for e in events if e["impact"] == "Medium"]
 
         if high:
             lines.append("🔴 *FORT IMPACT*")
             for e in high:
-                h_paris = convert_ny_to_paris(e["time_ny"])
-                lines.append(f"• `{h_paris}` | *{e['name']}*")
-                if e['forecast']: lines.append(f"  └ Cns: `{e['forecast']}` | Préc: `{e['previous']}`")
-                exp = get_explainer(e['name'])
+                t = convert_ny_to_paris(e.get("time_ny") or e.get("time"))
+                name = e.get("title") or e.get("name")
+                lines.append(f"• `{t}` | *{name}*")
+                if e.get("forecast"): lines.append(f"  └ Cns: `{e['forecast']}` | Préc: `{e['previous']}`")
+                exp = get_explainer(name)
                 if exp: lines.append(f"  >> _{exp}_")
             lines.append("")
 
-        if medium:
+        if med:
             lines.append("🟡 *IMPACT MOYEN*")
-            for e in medium:
-                h_paris = convert_ny_to_paris(e["time_ny"])
-                lines.append(f"• `{h_paris}` | {e['name']}")
+            for e in med:
+                t = convert_ny_to_paris(e.get("time_ny") or e.get("time"))
+                name = e.get("title") or e.get("name")
+                lines.append(f"• `{t}` | {name}")
+                exp = get_explainer(name)
+                if exp and "Bowman" not in name and "Barr" not in name: # Évite de spammer sur les discours
+                     lines.append(f"  >> _{exp}_")
             lines.append("")
 
     lines += [
         "─────────────────",
         "🔔 *Ouverture* : `15h30` Paris",
         "🕒 *Fenêtre*   : `15h30 → 16h30` (Volatilité)",
-        "📈 *ATH US30*  : `50 539 pts` (À surveiller)",
+        "📈 *ATH US30*  : `50 539 pts`",
         "",
         "🌍 *Watch* : Iran · Détroit · Pétrole · Trump",
         "",
@@ -139,22 +149,15 @@ def build_message(events):
     ]
     return "\n".join(lines)
 
-def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True
-    }
-    requests.post(url, json=payload, timeout=10)
-
 def main():
-    print("Démarrage du script...")
-    events = get_events()
-    message = build_message(events)
-    send_telegram(message)
-    print("Alerte envoyée avec succès !")
+    # On tente le JSON, si on a moins de 5 events (souvent signe qu'il manque les discours), on scrape
+    events = get_events_json()
+    if len(events) < 5:
+        events = get_events_scrape()
+    
+    msg = build_message(events)
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
 
 if __name__ == "__main__":
     main()
