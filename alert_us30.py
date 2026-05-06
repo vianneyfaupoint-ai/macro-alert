@@ -187,25 +187,24 @@ def build_message(events):
             "Seance pilotee par la geopolitique",
             "Surveiller : Iran - Detroit - Petrole - Trump",
         ]
-  else:
+ else:
         if high:
             lines.append("🔴 *FORT IMPACT*")
             for e in high:
                 paris = convert_ny_to_paris(e["time_ny"])
                 lines.append(f"• `{paris}` | *{e['name']}*")
+                
+                details = []
+                if e["forecast"]: details.append(f"Cns: {e['forecast']}")
+                if e["previous"]: details.append(f"Prec: {e['previous']}")
+                if e["actual"]: details.append(f"Reel: {e['actual']}")
+                if details: lines.append("  " + " | ".join(details))
+                
                 explainer = get_explainer(e["name"])
                 if explainer:
                     lines.append(f"  >> _{explainer}_")
             lines.append("")
-details = []
-                if e["forecast"]:
-                    details.append(f"Cns: {e['forecast']}")
-                if e["previous"]:
-                    details.append(f"Prec: {e['previous']}")
-                if e["actual"]:
-                    details.append(f"Reel: {e['actual']}")
-                if details:
-                    lines.append("  " + " | ".join(details))
+
         if medium:
             lines.append("🟡 *IMPACT MOYEN*")
             for e in medium:
