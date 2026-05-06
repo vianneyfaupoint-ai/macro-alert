@@ -129,7 +129,7 @@ def build_message(events):
 def main():
     events = get_events()
     message = build_message(events)
-    live_links = "\n\n" + "🗞 *Flux Live* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)"
+    live_links = "\n\n" + "🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)"
     full_message = message + live_links
     
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
