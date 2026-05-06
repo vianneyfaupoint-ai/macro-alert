@@ -187,13 +187,17 @@ def build_message(events):
             "Seance pilotee par la geopolitique",
             "Surveiller : Iran - Detroit - Petrole - Trump",
         ]
-    else:
+  else:
         if high:
-            lines.append("--- FORT IMPACT ---")
+            lines.append("🔴 *FORT IMPACT*")
             for e in high:
-                 paris = convert_ny_to_paris(e["time_ny"])
-                     lines.append(f"{paris} | {e['name']}")
-                details = []
+                paris = convert_ny_to_paris(e["time_ny"])
+                lines.append(f"• `{paris}` | *{e['name']}*")
+                explainer = get_explainer(e["name"])
+                if explainer:
+                    lines.append(f"  >> _{explainer}_")
+            lines.append("")
+details = []
                 if e["forecast"]:
                     details.append(f"Cns: {e['forecast']}")
                 if e["previous"]:
@@ -202,23 +206,17 @@ def build_message(events):
                     details.append(f"Reel: {e['actual']}")
                 if details:
                     lines.append("  " + " | ".join(details))
-                explainer = get_explainer(e["name"])
-                if explainer:
-                    lines.append(f"  >> {explainer}")
-                lines.append("")
-
         if medium:
-            lines.append("--- IMPACT MOYEN ---")
+            lines.append("🟡 *IMPACT MOYEN*")
             for e in medium:
-                 paris = convert_ny_to_paris(e["time_ny"])
+                paris = convert_ny_to_paris(e["time_ny"])
                 cns = f" (cns: {e['forecast']})" if e["forecast"] else ""
-                lines.append(f"{paris} | {e['name']}{cns}")
+                lines.append(f"• `{paris}` | {e['name']}{cns}")
                 explainer = get_explainer(e["name"])
                 if explainer:
-                    lines.append(f"  >> {explainer}")
+                    lines.append(f"  >> _{explainer}_")
             lines.append("")
-
-    
+            
     return "\n".join(lines)
 
 
