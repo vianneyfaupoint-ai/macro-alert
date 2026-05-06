@@ -10,9 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - - name: Checkout code
         uses: actions/checkout@v3
-
+        with:
+          ref: main  # On force GitHub à regarder sur la branche main
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
