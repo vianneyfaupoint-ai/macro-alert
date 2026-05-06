@@ -217,11 +217,7 @@ def build_message(events):
                 if explainer:
                     lines.append(f"  >> {explainer}")
             lines.append("")
-     lines += [       
-# AJOUT DES LIENS ICI
-        "🗞 *Flux Live* : [Guerre / Géopolitique](https://news.google.com/search?q=guerre) · [Trump News](https://news.google.com/search?q=Trump)",
-        "",
-    ]
+
     
     return "\n".join(lines)
 
