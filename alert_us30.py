@@ -247,11 +247,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-
-    msg = "\n".join(lines)
+   msg = "\n".join(lines)
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
+    print("Message envoyé avec succès !")
 
 if __name__ == "__main__":
     main()
