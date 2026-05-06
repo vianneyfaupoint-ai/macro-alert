@@ -1,27 +1,27 @@
-name: Macro Alert US30 V3
+name: send-macro-alert
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+  schedule:
+    # Cette ligne dit à GitHub de tourner à 07h00 UTC (soit 09h00 à Paris)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Garde ça pour pouvoir le lancer à la main si besoin
 
 jobs:
-  send-macro-alert:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install requests beautifulsoup4 lxml
 
-      - name: Run macro alert
+      - name: Run script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
