@@ -241,16 +241,16 @@ def main():
     print(f"Macro Alert - {datetime.now(PARIS_TZ).strftime('%d/%m/%Y %H:%M')}")
     events = get_events()
     message = build_message(events)
-    print(message)
-    send_telegram(message)
+    
+    # On ajoute tes liens live à la fin du message généré
+    live_links = "\n\n" + "🗞 *Flux Live* : [Guerre / Géopolitique](https://news.google.com/search?q=guerre) · [Trump News](https://news.google.com/search?q=Trump)"
+    full_message = message + live_links
+    
+    print(full_message)
+    
+    # Envoi via la fonction déjà existante dans ton code
+    send_telegram(full_message)
     print("Done")
-
-
-if __name__ == "__main__":
-   msg = "\n".join(lines)
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
-    print("Message envoyé avec succès !")
 
 if __name__ == "__main__":
     main()
