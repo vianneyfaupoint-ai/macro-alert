@@ -9,37 +9,6 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-EVENT_EXPLAINERS = {
-    "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
-    "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
-    "payroll": "Emploi US. Bon chiffre = economie solide = haussier",
-    "adp": "Avant-gout du NFP vendredi. Donne le ton en debut de semaine",
-    "jolts": "Offres emploi. Beaucoup = marche tendu = Fed garde taux hauts",
-    "jobless claims": "Inscriptions chomage hebdo. Hausse = signal ralentissement eco",
-    "unemployment": "Taux chomage. Hausse = mauvais pour economie = baissier",
-    "cpi": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
-    "consumer price": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
-    "pce": "Inflation preferee Fed. Tres surveillee avant chaque reunion FOMC",
-    "ppi": "Inflation producteurs. Precurseur du CPI a venir",
-    "producer price": "Inflation producteurs. Precurseur du CPI a venir",
-    "fomc": "Decision taux Fed. Catalyseur maximal. Volatilite extreme garantie",
-    "interest rate": "Decision taux Fed. Catalyseur maximal. Volatilite extreme garantie",
-    "fed": "Discours membre Fed. Chaque mot peut bouger le marche",
-    "powell": "Discours Powell. Forte volatilite pendant et apres",
-    "warsh": "Nouveau president Fed. Ses premiers mots donnent le cap monetaire",
-    "ism": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
-    "pmi": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
-    "gdp": "Croissance US. Bon chiffre = economie solide = haussier pour les actions",
-    "retail sales": "Consommation menages. Moteur principal de l economie US",
-    "consumer confidence": "Moral menages. Indicateur avance de la consommation a venir",
-    "michigan": "Moral menages. Indicateur avance de la consommation a venir",
-    "durable goods": "Commandes industrielles. Mesure l investissement des entreprises",
-    "beige book": "Rapport Fed sur l economie reelle. Donne le ton du prochain FOMC",
-    "fomc member": "Discours membre Fed. Peut signaler un changement de politique",
-    "trade balance": "Balance commerciale. Deficit eleve = dollar sous pression",
-    "new home sales": "Immobilier neuf. Tres sensible aux taux d interet",
-    "building permits": "Permis construire. Indicateur avance du secteur immobilier",
-}
 
 
 def get_explainer(event_name):
@@ -147,9 +116,26 @@ def get_events():
     return []
 
 
-def convert_ny_to_paris(time_str):
-    if not time_str:
-        return "?"
+# Dictionnaire des heures habituelles (en heure de Paris) pour éviter les "?"
+USUAL_HOURS = {
+    "adp": "14h15",
+    "crude oil": "16h30",
+    "fomc": "20h00",
+    "cpi": "14h30",
+    "nfp": "14h30",
+    "retail sales": "14h30",
+    "ism": "16h00",
+}
+
+def convert_ny_to_paris(time_str, event_name=""):
+    # Si l'heure est manquante ou bizarre, on cherche l'heure habituelle
+    if not time_str or any(x in time_str.lower() for x in ["all day", "tentative", "?", "day"]):
+        name_lower = event_name.lower()
+        for keyword, usual_time in USUAL_HOURS.items():
+            if keyword in name_lower:
+                return usual_time
+        return "Journée" # Par défaut si vraiment inconnu
+
     try:
         now_ny = datetime.now(NY_TZ)
         t_clean = time_str.lower().replace(" ", "")
@@ -158,12 +144,12 @@ def convert_ny_to_paris(time_str):
         elif ":" in t_clean:
             t = datetime.strptime(t_clean, "%H:%M")
         else:
-            return time_str
+            return "Journée"
+            
         dt_ny = now_ny.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
         return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
     except Exception:
-        return time_str
-
+        return "Journée"
 
 def build_message(events):
     now = datetime.now(PARIS_TZ)
@@ -191,7 +177,7 @@ def build_message(events):
         if high:
             lines.append("--- FORT IMPACT ---")
             for e in high:
-                paris = convert_ny_to_paris(e["time_ny"])
+                paris = convert_ny_to_paris(e["time_ny"], e["name"])
                 lines.append(f"{paris} | {e['name']}")
                 details = []
                 if e["forecast"]: details.append(f"Cns: {e['forecast']}")
@@ -206,7 +192,7 @@ def build_message(events):
         if medium:
             lines.append("--- IMPACT MOYEN ---")
             for e in medium:
-                paris = convert_ny_to_paris(e["time_ny"])
+                paris = convert_ny_to_paris(e["time_ny"], e["name"])
                 cns = f" (cns: {e['forecast']})" if e["forecast"] else ""
                 lines.append(f"{paris} | {e['name']}{cns}")
                 explainer = get_explainer(e["name"])
