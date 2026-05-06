@@ -191,8 +191,7 @@ def build_message(events):
         if high:
             lines.append("--- FORT IMPACT ---")
             for e in high:
-                paris = convert_ny_to_paris(e["time_ny"])
-                lines.append(f"{paris} | {e['name']}")
+                     lines.append(f"{paris} | {e['name']}")
                 details = []
                 if e["forecast"]:
                     details.append(f"Cns: {e['forecast']}")
@@ -210,7 +209,6 @@ def build_message(events):
         if medium:
             lines.append("--- IMPACT MOYEN ---")
             for e in medium:
-                paris = convert_ny_to_paris(e["time_ny"])
                 cns = f" (cns: {e['forecast']})" if e["forecast"] else ""
                 lines.append(f"{paris} | {e['name']}{cns}")
                 explainer = get_explainer(e["name"])
