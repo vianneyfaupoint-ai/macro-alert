@@ -243,7 +243,7 @@ def main():
     message = build_message(events)
     
     # On ajoute tes liens live à la fin du message généré
-    live_links = "\n\n" + "🗞 *Flux Live* : [Guerre / Géopolitique](https://news.google.com/search?q=guerre) · [Trump News](https://news.google.com/search?q=Trump)"
+    live_links = "\n\n" + "🗞 *Flux Live* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)"
     full_message = message + live_links
     
     print(full_message)
