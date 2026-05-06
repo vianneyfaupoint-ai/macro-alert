@@ -217,16 +217,9 @@ def build_message(events):
                 if explainer:
                     lines.append(f"  >> {explainer}")
             lines.append("")
-
-    lines += [
-        "--------------------",
-        "Ouverture : 15h30 Paris",
-        "Fenetre   : 15h30 -> 22h30",
-        "ATH US30  : 50 539 pts",
+# AJOUT DES LIENS ICI
+        "🗞 *Flux Live* : [Guerre / Géopolitique](https://news.google.com/search?q=guerre) · [Trump News](https://news.google.com/search?q=Trump)",
         "",
-        "Watch : Iran - Detroit - Petrole - Trump",
-        "",
-        "Bonne seance !",
     ]
     return "\n".join(lines)
 
