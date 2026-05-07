@@ -1,7 +1,7 @@
 name: US30 Macro Alert
 on:
   schedule:
-    - cron: '*/15 13-21 * * 1-5' # Toutes les 15 min l'après-midi
+    - cron: '*/30 13-21 * * 1-5'
   workflow_dispatch:
 jobs:
   run-script:
@@ -11,7 +11,10 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - run: pip install requests zoneinfo
+      - name: Install Dependencies
+        run: |
+          pip install requests zoneinfo playwright
+          playwright install chromium
       - env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
