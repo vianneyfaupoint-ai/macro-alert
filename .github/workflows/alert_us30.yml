@@ -1,26 +1,22 @@
 name: US30 Macro Alert
 on:
   schedule:
-    # Lance le script toutes les 30 min l'après-midi (UTC)
     - cron: '*/30 13-21 * * 1-5'
-  workflow_dispatch: # Bouton pour lancer manuellement
-
+  workflow_dispatch:
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10' # On s'aligne sur la version de ton log
 
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install requests zoneinfo playwright
-          # CETTE LIGNE EST CRUCIALE POUR LA PHOTO :
-          playwright install chromium 
+          playwright install chromium
 
       - name: Run Alert Script
         env:
