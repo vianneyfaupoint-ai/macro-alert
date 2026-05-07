@@ -1,6 +1,3 @@
-Compris, je garde tes liens exactement comme tu les as configurés. J'ai simplement intégré la correction pour l'affichage du chiffre **Réel** et des **Heures** sans toucher à tes textes.
-Voici le code complet avec tes liens d'origine :
-```python
 import os
 import requests
 from datetime import datetime
