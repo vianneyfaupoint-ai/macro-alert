@@ -9,7 +9,6 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Dictionnaire des explications (Tes textes d'origine)
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
     "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
@@ -71,7 +70,7 @@ def convert_ny_to_paris(time_str, event_name=""):
         return "Journée"
 
 def get_events():
-    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    url = "[https://nfs.faireconomy.media/ff_calendar_thisweek.json](https://nfs.faireconomy.media/ff_calendar_thisweek.json)"
     try:
         resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         data = resp.json()
@@ -130,15 +129,12 @@ def build_message(events):
 def main():
     events = get_events()
     message = build_message(events)
-    # Tes liens exacts (Tiktok et site)
-    live_links = "\n\n" + "🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)(https://joncosoluce.fr/)"
+    live_links = "\n\n" + "🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)([https://joncosoluce.fr/](https://joncosoluce.fr/))"
     full_message = message + live_links
     
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){TELEGRAM_TOKEN}/sendMessage"
     requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": full_message, "parse_mode": "Markdown", "disable_web_page_preview": True})
     print("Done")
 
 if __name__ == "__main__":
     main()
-
-```
