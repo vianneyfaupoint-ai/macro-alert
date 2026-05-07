@@ -1,29 +1,18 @@
 name: US30 Macro Alert
-
 on:
   schedule:
-    # Se lance toutes les 30 minutes de 13h00 à 22h00 UTC (15h-minuit Paris)
-    # uniquement du lundi au vendredi.
-    - cron: '*/30 13-21 * * 1-5'
-  workflow_dispatch: # Permet de le lancer manuellement pour tester
-
+    - cron: '*/15 13-21 * * 1-5' # Toutes les 15 min l'après-midi
+  workflow_dispatch:
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
-      - name: Install dependencies
-        run: pip install requests zoneinfo
-
-      - name: Run Alert Script
-        env:
+      - run: pip install requests zoneinfo
+      - env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python alert_us30.py
