@@ -15,13 +15,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install requests zoneinfo playwright
-          # On force l'installation dans le dossier local
-          playwright install chromium --with-deps
+          # Installation du navigateur ET des dépendances Linux système
+          python -m playwright install chromium --with-deps
 
       - name: Run script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # On indique au script où chercher le navigateur
-          PLAYWRIGHT_BROWSERS_PATH: 0
         run: python alert_us30.py
