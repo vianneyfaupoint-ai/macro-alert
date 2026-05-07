@@ -9,7 +9,6 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Dictionnaire mis à jour avec Labor Costs
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
     "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
@@ -89,4 +88,39 @@ def get_events():
 
 def build_message(events):
     now = datetime.now(PARIS_TZ)
-    jours = ["
+    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+    mois = ["jan", "fev", "mars", "avr", "mai", "juin", "juil", "aout", "sep", "oct", "nov", "dec"]
+    date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
+
+    lines = [f"🚀 *US30 Update — {date_str}*", "_Heure de Paris_", ""]
+
+    if not events:
+        lines.append("📅 Aucun event macro majeur aujourd'hui")
+    else:
+        lines.append("📊 *CALENDRIER ÉCO*")
+        for e in events:
+            paris = convert_ny_to_paris(e["time_ny"], e["name"])
+            actual_val = str(e.get('actual', '')).strip()
+            res = f" | ✅ *Réel: {actual_val}*" if actual_val else ""
+            cns = f" (cns: {e['forecast']})" if e.get('forecast') and not actual_val else ""
+            emoji = "🔴" if e.get('impact') == "High" else "🟡"
+            lines.append(f"{emoji} `{paris}` | {e['name']}{cns}{res}")
+            exp = get_explainer(e["name"])
+            if exp: lines.append(f"  >> _{exp}_")
+        lines.append("")
+            
+    return "\n".join(lines)
+
+def main():
+    events = get_events()
+    message = build_message(events)
+    live_links = "\n\n" + "🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)(https://joncosoluce.fr/)"
+    full_message = message + live_links
+    
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": full_message, "parse_mode": "Markdown", "disable_web_page_preview": True}
+        requests.post(url, json=payload)
+
+if __name__ == "__main__":
+    main()
