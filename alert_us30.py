@@ -9,7 +9,6 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Dictionnaire des explications (Inchangé)
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
     "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
@@ -31,6 +30,7 @@ EVENT_EXPLAINERS = {
     "retail sales": "Consommation menages. Moteur principal de l economie US",
 }
 
+# Mise à jour des heures habituelles (Ajout de Unemployment Claims)
 USUAL_HOURS = {
     "adp": "14h15",
     "crude oil": "16h30",
@@ -39,6 +39,9 @@ USUAL_HOURS = {
     "nfp": "14h30",
     "retail sales": "14h30",
     "ism": "16h00",
+    "unemployment claims": "14h30",
+    "productivity": "14h30",
+    "labor costs": "14h30",
 }
 
 def get_explainer(event_name):
@@ -49,8 +52,8 @@ def get_explainer(event_name):
     return None
 
 def convert_ny_to_paris(time_str, event_name=""):
+    name_lower = event_name.lower()
     if not time_str or any(x in time_str.lower() for x in ["all day", "tentative", "?", "day"]):
-        name_lower = event_name.lower()
         for keyword, usual_time in USUAL_HOURS.items():
             if keyword in name_lower:
                 return usual_time
@@ -83,7 +86,7 @@ def get_events():
                     "name": e.get("title", ""),
                     "high_impact": e.get("impact", "") == "High",
                     "forecast": e.get("forecast", "") or "",
-                    "actual": e.get("actual", "") or ""  # <-- AJOUT : On récupère le chiffre réel
+                    "actual": e.get("actual", "") or "" 
                 })
         return events
     except:
@@ -103,23 +106,21 @@ def build_message(events):
     if not events:
         lines.append("📅 Aucun event macro majeur aujourd'hui")
     else:
-        # Bloc Haut Impact
         if high:
             lines.append("🔴 *FORT IMPACT*")
             for e in high:
                 paris = convert_ny_to_paris(e["time_ny"], e["name"])
-                actual_str = f" | ✅ *Réel: {e['actual']}*" if e['actual'] else "" # Affichage si sorti
+                actual_str = f" | ✅ *Réel: {e['actual']}*" if e['actual'] else ""
                 lines.append(f"• `{paris}` | *{e['name']}*{actual_str}")
                 exp = get_explainer(e["name"])
                 if exp: lines.append(f"  >> _{exp}_")
             lines.append("")
 
-        # Bloc Impact Moyen
         if medium:
             lines.append("🟡 *IMPACT MOYEN*")
             for e in medium:
                 paris = convert_ny_to_paris(e["time_ny"], e["name"])
-                actual_str = f" | ✅ *Réel: {e['actual']}*" if e['actual'] else "" # Affichage si sorti
+                actual_str = f" | ✅ *Réel: {e['actual']}*" if e['actual'] else ""
                 cns = f" (cns: {e['forecast']})" if e['forecast'] else ""
                 lines.append(f"• `{paris}` | {e['name']}{cns}{actual_str}")
                 exp = get_explainer(e["name"])
