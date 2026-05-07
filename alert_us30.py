@@ -35,22 +35,22 @@ USUAL_HOURS = {
 }
 
 def get_explainer(event_name):
-    name_lower = event_name.lower()
+    name_lower = str(event_name).lower()
     for keyword, explanation in EVENT_EXPLAINERS.items():
         if keyword in name_lower:
             return explanation
     return None
 
 def convert_ny_to_paris(time_str, event_name=""):
-    if not time_str or any(x in time_str.lower() for x in ["all day", "tentative", "?", "day"]):
-        name_lower = event_name.lower()
+    name_lower = str(event_name).lower()
+    if not time_str or any(x in str(time_str).lower() for x in ["all day", "tentative", "?", "day"]):
         for keyword, usual_time in USUAL_HOURS.items():
             if keyword in name_lower:
                 return usual_time
         return "Journée"
     try:
         now_ny = datetime.now(NY_TZ)
-        t_clean = time_str.lower().replace(" ", "")
+        t_clean = str(time_str).lower().replace(" ", "")
         if "am" in t_clean or "pm" in t_clean:
             t = datetime.strptime(t_clean, "%I:%M%p")
         elif ":" in t_clean:
@@ -66,20 +66,22 @@ def get_events():
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
         data = resp.json()
         today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
         events = []
         for e in data:
-            if e.get("country") == "USD" and e.get("date", "")[:10] == today_str:
+            if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today_str:
                 events.append({
                     "time_ny": e.get("time", ""),
-                    "name": e.get("title", ""),
+                    "name": e.get("title", "Event"),
                     "impact": e.get("impact", ""),
-                    "forecast": e.get("forecast", "") or "",
-                    "actual": e.get("actual", "") or "" 
+                    "forecast": e.get("forecast", ""),
+                    "actual": e.get("actual", "")
                 })
         return events
-    except:
+    except Exception as err:
+        print(f"Erreur API: {err}")
         return []
 
 def build_message(events):
@@ -93,16 +95,14 @@ def build_message(events):
     if not events:
         lines.append("📅 Aucun event macro majeur aujourd'hui")
     else:
-        # On affiche tout sans filtrer par impact pour ne rien rater
-        lines.append("📊 *CALENDRIER DU JOUR*")
         for e in events:
             paris = convert_ny_to_paris(e["time_ny"], e["name"])
-            actual_val = e['actual'].strip()
-            res = f" | ✅ *Réel: {actual_val}*" if actual_val else ""
-            cns = f" (cns: {e['forecast']})" if e['forecast'] and not actual_val else ""
+            actual_val = str(e.get('actual', '')).strip()
             
-            # Emoji selon l'impact
-            emoji = "🔴" if e['impact'] == "High" else "🟡"
+            res = f" | ✅ *Réel: {actual_val}*" if actual_val else ""
+            cns = f" (cns: {e['forecast']})" if e.get('forecast') and not actual_val else ""
+            
+            emoji = "🔴" if e.get('impact') == "High" else "🟡"
             
             lines.append(f"{emoji} `{paris}` | {e['name']}{cns}{res}")
             exp = get_explainer(e["name"])
@@ -120,4 +120,13 @@ def main():
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": full_message, "parse_mode": "Markdown", "disable_web_page_preview": True}
-        requests.post(url, json=payload)
+        try:
+            r = requests.post(url, json=payload)
+            print(f"Status: {r.status_code}")
+        except Exception as e:
+            print(f"Erreur envoi: {e}")
+    else:
+        print("Erreur: Secrets manquants")
+
+if __name__ == "__main__":
+    main()
