@@ -1,14 +1,16 @@
 import os
 import requests
+import asyncio
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from playwright.async_api import async_playwright
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
+# Tes explications de départ
 EVENT_EXPLAINERS = {
     "non-farm": "Si Réel > CNS = US30 monte fort.",
     "jobless claims": "Si Réel > CNS = Mauvais signe éco = Baissier.",
@@ -20,49 +22,74 @@ EVENT_EXPLAINERS = {
     "consumer credit": "Si Réel > CNS = Les gens consomment = Haussier.",
 }
 
-def main():
-    try:
-        r = requests.get("https://nfs.faireconomy.media/ff_calendar_thisweek.json", timeout=15)
-        data = r.json()
-    except: return
+async def take_screenshot():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.set_viewport_size({"width": 1280, "height": 800})
+        await page.goto("https://www.forexfactory.com/calendar?day=today")
+        # On attend que le tableau soit chargé
+        await page.wait_for_selector(".calendar__table")
+        element = await page.query_selector(".calendar__table")
+        await element.screenshot(path="calendar.png")
+        await browser.close()
 
-    today = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+def get_macro_text():
+    # Ton code de départ pour le texte
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    try:
+        r = requests.get(url, timeout=15)
+        data = r.json()
+    except: return "Erreur API"
+
+    today_ny = datetime.now(NY_TZ).strftime("%Y-%m-%d")
     now_p = datetime.now(PARIS_TZ)
-    
-    lines = [f"🚀 *US30 Update — {now_p.strftime('%d/%m/%Y')}*", "_Vérification auto des résultats_", ""]
-    
-    found_any = False
+    lines = [f"🚀 *US30 Update — {now_p.strftime('%d/%m/%Y')}*", ""]
+
     for e in data:
-        if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today:
-            found_any = True
+        if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today_ny:
             name = e.get("title", "Event")
-            # Correction Heure : Si l'API envoie rien, on met l'heure US par défaut
-            time_val = e.get("time") if e.get("time") else "En cours"
             actual = str(e.get("actual", "")).strip()
             forecast = str(e.get("forecast", "")).strip()
-            
             emoji = "🔴" if e.get("impact") == "High" else "🟡"
-            lines.append(f"{emoji} `{time_val}` | *{name}*")
             
-            # Bloc de résultat ultra-visible
+            lines.append(f"{emoji} *{name}*")
             if actual and actual.lower() not in ["none", "null", ""]:
-                lines.append(f"   ┗ ✅ *RÉEL : {actual}* (Prévu: {forecast})")
+                lines.append(f"   ┗ ✅ *RÉEL : {actual}*")
             elif forecast:
-                lines.append(f"   ┗ ⏳ Attendu: {forecast}")
+                lines.append(f"   ┗ (cns: {forecast})")
             
             for kw, expl in EVENT_EXPLAINERS.items():
                 if kw in name.lower():
                     lines.append(f"   >> _{expl}_")
                     break
-    
-    if not found_any:
-        lines.append("📅 Aucun événement USD aujourd'hui.")
+    return "\n".join(lines)
 
-    full_msg = "\n".join(lines) + "\n\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)\n🔗 [joncosoluce.fr](https://joncosoluce.fr/)"
+async def main():
+    # 1. On récupère le texte de ton script de départ
+    message_text = get_macro_text()
     
+    # 2. On prend la capture d'écran en PLUS
+    try:
+        await take_screenshot()
+        has_photo = True
+    except:
+        has_photo = False
+
+    # 3. On envoie tout à Telegram
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
-                      json={"chat_id": TELEGRAM_CHAT_ID, "text": full_msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
+        if has_photo:
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
+            with open("calendar.png", "rb") as photo:
+                requests.post(url, data={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "caption": message_text,
+                    "parse_mode": "Markdown"
+                }, files={"photo": photo})
+        else:
+            # Si le screenshot rate, on envoie au moins le texte
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
+                          json={"chat_id": TELEGRAM_CHAT_ID, "text": message_text, "parse_mode": "Markdown"})
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
