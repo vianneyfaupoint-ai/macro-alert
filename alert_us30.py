@@ -9,9 +9,21 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
+# On force les heures car l'API les efface parfois après le passage
+FIXED_HOURS = {
+    "unemployment claims": "14:30",
+    "productivity": "14:30",
+    "labor costs": "14:30",
+    "construction spending": "16:00",
+    "natural gas": "16:30",
+    "kashkari": "20:00",
+    "hammack": "20:00",
+    "williams": "20:00",
+    "consumer credit": "21:00"
+}
+
 EVENT_EXPLAINERS = {
     "non-farm": "Si Réel > CNS = US30 monte fort.",
-    "nfp": "Si Réel > CNS = US30 monte fort.",
     "jobless claims": "Si Réel > CNS = Mauvais signe éco = Baissier.",
     "unemployment": "Si Réel > CNS = Ralentissement éco = Baissier.",
     "labor costs": "Si Réel > CNS = Risque inflation = Mauvais pour US30.",
@@ -20,11 +32,9 @@ EVENT_EXPLAINERS = {
     "natural gas": "Si Réel > CNS = Offre abondante = Prix Gaz baisse.",
     "consumer credit": "Si Réel > CNS = Les gens consomment = Haussier.",
     "fomc": "Catalyseur maximal. Volatilité extrême.",
-    "fed": "Discours membre Fed. Chaque mot peut bouger le marché.",
 }
 
 def main():
-    # Source de données directe
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         r = requests.get(url, timeout=15)
@@ -38,32 +48,34 @@ def main():
     lines.append("📊 *RÉSULTATS ET CALENDRIER*")
 
     for e in data:
-        # On ne prend que le USD d'aujourd'hui
         if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today_ny:
             name = e.get("title", "Event")
+            name_low = name.lower()
+            
+            # Récupération de l'heure : API ou Dictionnaire de secours
             time_raw = e.get("time", "")
+            if not time_raw or time_raw == "":
+                for kw, hr in FIXED_HOURS.items():
+                    if kw in name_low:
+                        time_raw = hr
+                        break
+            
             actual = str(e.get("actual", "")).strip()
             forecast = str(e.get("forecast", "")).strip()
-            
-            # Emoji d'impact
             emoji = "🔴" if e.get("impact") == "High" else "🟡"
-            
-            # Formatage de la ligne
-            time_display = time_raw if time_raw else "---"
-            
-            # Affichage CRITIQUE du Réel
-            if actual and actual.lower() != "none":
-                val_display = f"✅ *Réel: {actual}* (cns: {forecast})"
-            else:
-                val_display = f"(cns: {forecast})" if forecast else ""
 
-            lines.append(f"{emoji} `{time_display}` | {name}")
-            if val_display:
-                lines.append(f"   ┗ {val_display}")
+            # Formatage de la ligne de l'événement
+            lines.append(f"{emoji} `{time_raw}` | {name}")
             
-            # Explication
+            # Affichage du RÉSULTAT (On force l'affichage si l'info existe)
+            if actual and actual.lower() not in ["none", "null", ""]:
+                lines.append(f"   ┗ ✅ *Réel: {actual}* (cns: {forecast})")
+            elif forecast:
+                lines.append(f"   ┗ (cns: {forecast})")
+            
+            # Ajout de l'explication
             for kw, expl in EVENT_EXPLAINERS.items():
-                if kw in name.lower():
+                if kw in name_low:
                     lines.append(f"   >> _{expl}_")
                     break
     
