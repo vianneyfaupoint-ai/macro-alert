@@ -10,7 +10,6 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Tes explications de départ
 EVENT_EXPLAINERS = {
     "non-farm": "Si Réel > CNS = US30 monte fort.",
     "jobless claims": "Si Réel > CNS = Mauvais signe éco = Baissier.",
@@ -24,30 +23,39 @@ EVENT_EXPLAINERS = {
 
 async def take_screenshot():
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.set_viewport_size({"width": 1280, "height": 800})
-        await page.goto("https://www.forexfactory.com/calendar?day=today")
-        # On attend que le tableau soit chargé
-        await page.wait_for_selector(".calendar__table")
-        element = await page.query_selector(".calendar__table")
-        await element.screenshot(path="calendar.png")
-        await browser.close()
+        try:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_viewport_size({"width": 1280, "height": 900})
+            # On va sur le calendrier
+            await page.goto("https://www.forexfactory.com/calendar?day=today", timeout=60000)
+            await page.wait_for_selector(".calendar__table", timeout=30000)
+            
+            # On capture la zone du tableau
+            element = await page.query_selector(".calendar__table")
+            await element.screenshot(path="calendar.png")
+            await browser.close()
+            return True
+        except Exception as e:
+            print(f"Erreur screenshot: {e}")
+            return False
 
 def get_macro_text():
-    # Ton code de départ pour le texte
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         r = requests.get(url, timeout=15)
         data = r.json()
-    except: return "Erreur API"
+    except Exception as e:
+        return f"Erreur API: {e}"
 
     today_ny = datetime.now(NY_TZ).strftime("%Y-%m-%d")
     now_p = datetime.now(PARIS_TZ)
     lines = [f"🚀 *US30 Update — {now_p.strftime('%d/%m/%Y')}*", ""]
 
+    found = False
     for e in data:
         if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today_ny:
+            found = True
             name = e.get("title", "Event")
             actual = str(e.get("actual", "")).strip()
             forecast = str(e.get("forecast", "")).strip()
@@ -63,33 +71,38 @@ def get_macro_text():
                 if kw in name.lower():
                     lines.append(f"   >> _{expl}_")
                     break
+    
+    if not found:
+        lines.append("📅 Aucun événement USD aujourd'hui.")
+        
     return "\n".join(lines)
 
-async def main():
-    # 1. On récupère le texte de ton script de départ
-    message_text = get_macro_text()
+async def run_all():
+    # 1. Obtenir le texte
+    text = get_macro_text()
     
-    # 2. On prend la capture d'écran en PLUS
-    try:
-        await take_screenshot()
-        has_photo = True
-    except:
-        has_photo = False
-
-    # 3. On envoie tout à Telegram
+    # 2. Prendre la photo
+    photo_success = await take_screenshot()
+    
+    # 3. Envoyer à Telegram
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        if has_photo:
+        if photo_success and os.path.exists("calendar.png"):
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
             with open("calendar.png", "rb") as photo:
                 requests.post(url, data={
                     "chat_id": TELEGRAM_CHAT_ID,
-                    "caption": message_text,
+                    "caption": text,
                     "parse_mode": "Markdown"
                 }, files={"photo": photo})
         else:
-            # Si le screenshot rate, on envoie au moins le texte
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
-                          json={"chat_id": TELEGRAM_CHAT_ID, "text": message_text, "parse_mode": "Markdown"})
+            # Backup si la photo rate
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            requests.post(url, json={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": text,
+                "parse_mode": "Markdown"
+            })
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Correction de l'erreur d'arguments
+    asyncio.run(run_all())
