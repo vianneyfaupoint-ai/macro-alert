@@ -9,7 +9,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
-# Dictionnaire avec explications et impact du Consensus (CNS)
+# Dictionnaire complet avec les nouvelles références CNS
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
     "nfp": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
@@ -20,7 +20,10 @@ EVENT_EXPLAINERS = {
     "unemployment": "Taux chômage. Si Réel > CNS = Ralentissement éco = Baissier.",
     "labor costs": "Coût main d'oeuvre. Si Réel > CNS = Risque inflation = Mauvais pour US30.",
     "productivity": "Productivité. Si Réel > CNS = Efficacité éco = Haussier.",
-    "cpi": "Inflation. Si Réel > CNS = Inflation persistante = La Fed ne baissera pas les taux = Baissier.",
+    "construction spending": "Dépenses construction. Si Réel > CNS = Secteur immo solide = Haussier.",
+    "natural gas": "Stocks de Gaz. Si Réel > CNS = Offre abondante (ou demande faible) = Impact énergie.",
+    "consumer credit": "Crédit conso. Si Réel > CNS = Les gens consomment/empruntent = Haussier.",
+    "cpi": "Inflation. Si Réel > CNS = Inflation persistante = Pas de baisse de taux = Baissier.",
     "pce": "Inflation préférée Fed. Si Réel > CNS = Pression sur les taux = Baissier.",
     "ppi": "Inflation producteurs. Si Réel > CNS = Signal d'inflation future = Baissier.",
     "fomc": "Décision taux Fed. Catalyseur maximal. Volatilité extrême garantie.",
@@ -35,7 +38,8 @@ EVENT_EXPLAINERS = {
 USUAL_HOURS = {
     "adp": "14h15", "crude oil": "16h30", "fomc": "20h00", "cpi": "14h30",
     "nfp": "14h30", "retail sales": "14h30", "ism": "16h00", "unemployment claims": "14h30",
-    "labor costs": "14h30", "productivity": "14h30"
+    "labor costs": "14h30", "productivity": "14h30", "construction spending": "16h00",
+    "natural gas": "16h30"
 }
 
 def get_explainer(event_name):
