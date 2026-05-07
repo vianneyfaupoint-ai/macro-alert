@@ -27,11 +27,9 @@ async def take_screenshot():
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1280, "height": 900})
-            # On va sur le calendrier
-            await page.goto("https://www.forexfactory.com/calendar?day=today", timeout=60000)
+            # On force le passage en mode "Desktop" pour avoir le tableau complet
+            await page.goto("https://www.forexfactory.com/calendar?day=today", wait_until="networkidle")
             await page.wait_for_selector(".calendar__table", timeout=30000)
-            
-            # On capture la zone du tableau
             element = await page.query_selector(".calendar__table")
             await element.screenshot(path="calendar.png")
             await browser.close()
@@ -77,32 +75,19 @@ def get_macro_text():
         
     return "\n".join(lines)
 
-async def run_all():
-    # 1. Obtenir le texte
+# AJOUT DE *args POUR ACCEPTER LES ARGUMENTS FANTÔMES DE GITHUB
+async def main(*args, **kwargs):
     text = get_macro_text()
-    
-    # 2. Prendre la photo
     photo_success = await take_screenshot()
     
-    # 3. Envoyer à Telegram
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         if photo_success and os.path.exists("calendar.png"):
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
             with open("calendar.png", "rb") as photo:
-                requests.post(url, data={
-                    "chat_id": TELEGRAM_CHAT_ID,
-                    "caption": text,
-                    "parse_mode": "Markdown"
-                }, files={"photo": photo})
+                requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": text, "parse_mode": "Markdown"}, files={"photo": photo})
         else:
-            # Backup si la photo rate
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-            requests.post(url, json={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": text,
-                "parse_mode": "Markdown"
-            })
+            requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"})
 
 if __name__ == "__main__":
-    # Correction de l'erreur d'arguments
-    asyncio.run(run_all())
+    asyncio.run(main())
