@@ -9,26 +9,27 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
+# Dictionnaire avec explications et impact du Consensus (CNS)
 EVENT_EXPLAINERS = {
-    "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
-    "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
-    "payroll": "Emploi US. Bon chiffre = economie solide = haussier",
-    "adp": "Avant-gout du NFP vendredi. Donne le ton en debut de semaine",
-    "jolts": "Offres emploi. Beaucoup = marche tendu = Fed garde taux hauts",
-    "jobless claims": "Inscriptions chomage hebdo. Hausse = signal ralentissement eco",
-    "unemployment": "Taux chomage. Hausse = mauvais pour economie = baissier",
-    "labor costs": "Cout de la main d'oeuvre. Si ca monte = inflation = mauvais pour les actions",
-    "productivity": "Productivite US. Si ca baisse = moins de croissance = mauvais pour US30",
-    "cpi": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
-    "pce": "Inflation preferee Fed. Tres surveillee avant chaque reunion FOMC",
-    "ppi": "Inflation producteurs. Precurseur du CPI a venir",
-    "fomc": "Decision taux Fed. Catalyseur maximal. Volatilite extreme garantie",
-    "fed": "Discours membre Fed. Chaque mot peut bouger le marche",
-    "powell": "Discours Powell. Forte volatilite pendant et apres",
-    "ism": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
-    "pmi": "Activite eco. Dessus 50 = expansion = haussier. Dessous 50 = contraction = baissier",
-    "gdp": "Croissance US. Bon chiffre = economie solide = haussier pour les actions",
-    "retail sales": "Consommation menages. Moteur principal de l economie US",
+    "non-farm": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
+    "nfp": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
+    "payroll": "Emploi US. Réel > CNS = économie solide = Haussier.",
+    "adp": "Avant-goût du NFP. Réel > CNS = souvent positif pour le dollar.",
+    "jolts": "Offres emploi. Réel > CNS = marché tendu = la Fed peut rester ferme.",
+    "jobless claims": "Inscriptions chômage. Si Réel > CNS = Mauvais signe éco = Baissier.",
+    "unemployment": "Taux chômage. Si Réel > CNS = Ralentissement éco = Baissier.",
+    "labor costs": "Coût main d'oeuvre. Si Réel > CNS = Risque inflation = Mauvais pour US30.",
+    "productivity": "Productivité. Si Réel > CNS = Efficacité éco = Haussier.",
+    "cpi": "Inflation. Si Réel > CNS = Inflation persistante = La Fed ne baissera pas les taux = Baissier.",
+    "pce": "Inflation préférée Fed. Si Réel > CNS = Pression sur les taux = Baissier.",
+    "ppi": "Inflation producteurs. Si Réel > CNS = Signal d'inflation future = Baissier.",
+    "fomc": "Décision taux Fed. Catalyseur maximal. Volatilité extrême garantie.",
+    "fed": "Discours membre Fed. Chaque mot peut bouger le marché.",
+    "powell": "Discours Powell. Forte volatilité pendant et après.",
+    "ism": "Activité éco. Si Réel > CNS (et > 50) = Expansion = Haussier.",
+    "pmi": "Activité éco. Si Réel > CNS (et > 50) = Expansion = Haussier.",
+    "gdp": "Croissance US (PIB). Si Réel > CNS = Économie forte = Haussier.",
+    "retail sales": "Consommation. Si Réel > CNS = Les ménages dépensent = Haussier.",
 }
 
 USUAL_HOURS = {
