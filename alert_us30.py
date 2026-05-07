@@ -9,6 +9,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
+# Dictionnaire mis à jour avec Labor Costs
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
     "nfp": "Chiffre le plus important du mois. Dessus consensus = US30 monte fort",
@@ -17,6 +18,8 @@ EVENT_EXPLAINERS = {
     "jolts": "Offres emploi. Beaucoup = marche tendu = Fed garde taux hauts",
     "jobless claims": "Inscriptions chomage hebdo. Hausse = signal ralentissement eco",
     "unemployment": "Taux chomage. Hausse = mauvais pour economie = baissier",
+    "labor costs": "Cout de la main d'oeuvre. Si ca monte = inflation = mauvais pour les actions",
+    "productivity": "Productivite US. Si ca baisse = moins de croissance = mauvais pour US30",
     "cpi": "Inflation. Chiffre eleve = Fed ne baisse pas taux = pression sur actions",
     "pce": "Inflation preferee Fed. Tres surveillee avant chaque reunion FOMC",
     "ppi": "Inflation producteurs. Precurseur du CPI a venir",
@@ -32,6 +35,7 @@ EVENT_EXPLAINERS = {
 USUAL_HOURS = {
     "adp": "14h15", "crude oil": "16h30", "fomc": "20h00", "cpi": "14h30",
     "nfp": "14h30", "retail sales": "14h30", "ism": "16h00", "unemployment claims": "14h30",
+    "labor costs": "14h30", "productivity": "14h30"
 }
 
 def get_explainer(event_name):
@@ -80,54 +84,9 @@ def get_events():
                     "actual": e.get("actual", "")
                 })
         return events
-    except Exception as err:
-        print(f"Erreur API: {err}")
+    except:
         return []
 
 def build_message(events):
     now = datetime.now(PARIS_TZ)
-    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
-    mois = ["jan", "fev", "mars", "avr", "mai", "juin", "juil", "aout", "sep", "oct", "nov", "dec"]
-    date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
-
-    lines = [f"🚀 *US30 Update — {date_str}*", "_Heure de Paris_", ""]
-
-    if not events:
-        lines.append("📅 Aucun event macro majeur aujourd'hui")
-    else:
-        for e in events:
-            paris = convert_ny_to_paris(e["time_ny"], e["name"])
-            actual_val = str(e.get('actual', '')).strip()
-            
-            res = f" | ✅ *Réel: {actual_val}*" if actual_val else ""
-            cns = f" (cns: {e['forecast']})" if e.get('forecast') and not actual_val else ""
-            
-            emoji = "🔴" if e.get('impact') == "High" else "🟡"
-            
-            lines.append(f"{emoji} `{paris}` | {e['name']}{cns}{res}")
-            exp = get_explainer(e["name"])
-            if exp: lines.append(f"  >> _{exp}_")
-        lines.append("")
-            
-    return "\n".join(lines)
-
-def main():
-    events = get_events()
-    message = build_message(events)
-    live_links = "\n\n" + "🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)(https://joncosoluce.fr/)"
-    full_message = message + live_links
-    
-    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": full_message, "parse_mode": "Markdown", "disable_web_page_preview": True}
-        try:
-            r = requests.post(url, json=payload)
-            print(f"Status: {r.status_code}")
-        except Exception as e:
-            print(f"Erreur envoi: {e}")
-    else:
-        print("Erreur: Secrets manquants")
-
-if __name__ == "__main__":
-    main()
-
+    jours = ["
