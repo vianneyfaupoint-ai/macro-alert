@@ -1,21 +1,29 @@
 name: US30 Macro Alert
 on:
   schedule:
+    # Lance le script toutes les 30 min l'après-midi (UTC)
     - cron: '*/30 13-21 * * 1-5'
-  workflow_dispatch:
+  workflow_dispatch: # Bouton pour lancer manuellement
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install Dependencies
+
+      - name: Install dependencies
         run: |
           pip install requests zoneinfo playwright
-          playwright install chromium
-      - env:
+          # CETTE LIGNE EST CRUCIALE POUR LA PHOTO :
+          playwright install chromium 
+
+      - name: Run Alert Script
+        env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python alert_us30.py
