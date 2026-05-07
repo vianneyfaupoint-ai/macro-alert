@@ -9,6 +9,8 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
+#notes# 
+
 EVENT_EXPLAINERS = {
     "non-farm": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
     "nfp": "Chiffre le plus important du mois. Si Réel > CNS = US30 monte fort.",
