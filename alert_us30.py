@@ -34,6 +34,7 @@ EVENT_EXPLAINERS = {
     "retail sales": "Consommation. Si Réel > CNS = Les ménages dépensent = Haussier.",
 }
 
+
 USUAL_HOURS = {
     "adp": "14h15", "crude oil": "16h30", "fomc": "20h00", "cpi": "14h30",
     "nfp": "14h30", "retail sales": "14h30", "ism": "16h00", "unemployment claims": "14h30",
