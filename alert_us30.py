@@ -2,16 +2,6 @@ import os
 import requests
 from datetime import datetime
 
-# Essaye d'importer zoneinfo, sinon utilise une alternative
-try:
-    from zoneinfo import ZoneInfo
-    PARIS_TZ = ZoneInfo("Europe/Paris")
-    NY_TZ = ZoneInfo("America/New_York")
-except ImportError:
-    # Secours si zoneinfo n'est pas là
-    from datetime import timezone, timedelta
-    PARIS_TZ = timezone(timedelta(hours=2))
-    NY_TZ = timezone(timedelta(hours=-4))
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
