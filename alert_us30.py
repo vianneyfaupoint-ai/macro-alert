@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-
+ 
 PARIS_TZ = ZoneInfo("Europe/Paris")
 NY_TZ = ZoneInfo("America/New_York")
 
