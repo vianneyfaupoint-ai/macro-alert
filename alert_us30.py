@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 # Config via Secrets GitHub
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-# Nettoyage de l'ID (enlève les espaces ou "ID:" si présents)
+# Nettoyage  de l'ID (enlève les espaces ou "ID:" si présents)
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").replace("ID:", "").strip()
 
 def get_macro_data():
