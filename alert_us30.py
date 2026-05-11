@@ -1,7 +1,6 @@
 import os
 import requests
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 # Nettoyage automatique de l'ID
