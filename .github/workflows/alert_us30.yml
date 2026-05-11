@@ -1,5 +1,5 @@
 name: US30 Macro Alert
-
+ 
 on:
   schedule:
     # Se lance toutes les 30 minutes de 13h00 à 22h00 UTC (15h-minuit Paris)
