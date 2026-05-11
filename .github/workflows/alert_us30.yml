@@ -14,8 +14,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests zoneinfo playwright
-          # Installation du navigateur ET des dépendances Linux système
+          pip install requests playwright
           python -m playwright install chromium --with-deps
 
       - name: Run script
