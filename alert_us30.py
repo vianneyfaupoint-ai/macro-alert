@@ -1,68 +1,39 @@
 import os
 import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+# Configuration Telegram
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-PARIS_TZ = ZoneInfo("Europe/Paris")
-NY_TZ = ZoneInfo("America/New_York")
+def get_now_paris():
+    # Calcul manuel de l'heure de Paris (UTC+2 en été)
+    # C'est plus simple et ça évite les erreurs de modules manquants
+    return datetime.utcnow() + timedelta(hours=2)
 
-EVENT_EXPLAINERS = {
-    "non-farm": "Si Réel > CNS = US30 monte fort.",
-    "jobless claims": "Si Réel > CNS = Mauvais signe éco = Baissier.",
-    "unemployment": "Si Réel > CNS = Ralentissement éco = Baissier.",
-    "labor costs": "Si Réel > CNS = Risque inflation = Mauvais pour US30.",
-    "productivity": "Si Réel > CNS = Efficacité éco = Haussier.",
-    "construction spending": "Si Réel > CNS = Secteur immo solide = Haussier.",
-    "natural gas": "Si Réel > CNS = Offre abondante = Prix Gaz baisse.",
-    "consumer credit": "Si Réel > CNS = Les gens consomment = Haussier.",
-}
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    try:
+        response = requests.post(url, json=payload)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Erreur envoi Telegram : {e}")
+        return False
 
 def main():
-    try:
-        r = requests.get("https://nfs.faireconomy.media/ff_calendar_thisweek.json", timeout=15)
-        data = r.json()
-    except: return
-
-    today = datetime.now(NY_TZ).strftime("%Y-%m-%d")
-    now_p = datetime.now(PARIS_TZ)
+    now = get_now_paris()
+    heure_formattee = now.strftime("%H:%M:%S")
     
-    lines = [f"🚀 *US30 Update — {now_p.strftime('%d/%m/%Y')}*", "_Vérification auto des résultats_", ""]
+    print(f"Exécution du script à {heure_formattee} (Heure de Paris)")
     
-    found_any = False
-    for e in data:
-        if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today:
-            found_any = True
-            name = e.get("title", "Event")
-            # Correction Heure : Si l'API envoie rien, on met l'heure US par défaut
-            time_val = e.get("time") if e.get("time") else "En cours"
-            actual = str(e.get("actual", "")).strip()
-            forecast = str(e.get("forecast", "")).strip()
-            
-            emoji = "🔴" if e.get("impact") == "High" else "🟡"
-            lines.append(f"{emoji} `{time_val}` | *{name}*")
-            
-            # Bloc de résultat ultra-visible
-            if actual and actual.lower() not in ["none", "null", ""]:
-                lines.append(f"   ┗ ✅ *RÉEL : {actual}* (Prévu: {forecast})")
-            elif forecast:
-                lines.append(f"   ┗ ⏳ Attendu: {forecast}")
-            
-            for kw, expl in EVENT_EXPLAINERS.items():
-                if kw in name.lower():
-                    lines.append(f"   >> _{expl}_")
-                    break
+    # Ton message d'alerte
+    message = f"🚀 *US30 Macro Alert*\n\nIl est {heure_formattee}, le script est bien lancé !"
     
-    if not found_any:
-        lines.append("📅 Aucun événement USD aujourd'hui.")
-
-    full_msg = "\n".join(lines) + "\n\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)\n🔗 [joncosoluce.fr](https://joncosoluce.fr/)"
-    
-    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
-                      json={"chat_id": TELEGRAM_CHAT_ID, "text": full_msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
+    if send_telegram_message(message):
+        print("✅ Message envoyé avec succès !")
+    else:
+        print("❌ Échec de l'envoi.")
 
 if __name__ == "__main__":
     main()
