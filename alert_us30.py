@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-PARIS_TZ = ZoneInfo("Europe/Paris")
-NY_TZ = ZoneInfo("America/New_York")
+
 
 # Dictionnaire complet avec les nouvelles références CNS
 EVENT_EXPLAINERS = {
@@ -65,12 +64,12 @@ def convert_ny_to_paris(time_str, event_name=""):
         else:
             return "Journée"
         dt_ny = now_ny.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
-        return dt_ny.astimezone(PARIS_TZ).strftime("%Hh%M")
+        
     except:
         return "Journée"
 
 def get_events():
-    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek."
     try:
         resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
@@ -91,7 +90,7 @@ def get_events():
         return []
 
 def build_message(events):
-    now = datetime.now(PARIS_TZ)
+    now = datetime.now
     jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
     mois = ["jan", "fev", "mars", "avr", "mai", "juin", "juil", "aout", "sep", "oct", "nov", "dec"]
     date_str = f"{jours[now.weekday()]} {now.day} {mois[now.month-1]} {now.year}"
