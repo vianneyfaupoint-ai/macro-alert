@@ -1,4 +1,4 @@
-name: Macro Alert US30 V3
+name: Macro Alert US30
 
 on:
   workflow_dispatch:
