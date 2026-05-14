@@ -1,4 +1,4 @@
-name: US30 Macro Alert
+name: Macro Alert US30
 
 on:
   schedule:
