@@ -20,16 +20,21 @@ jobs:
         with:
           python-version: "3.9"
 
-name: Run Alert
+ - name: Run alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          # Cette commande cherche le fichier et le lance là où il se trouve
-          FILE_PATH=$(find . -maxdepth 3 -name "alert_us30.py" -print -quit)
+        run:
+          echo "🔍 Recherche du fichier alert_us30.py..."
+          # Cherche le fichier dans tout le projet
+          FILE_PATH=$(find . -name "alert_us30.py" -print -quit)
+          
           if [ -z "$FILE_PATH" ]; then
-            echo "❌ ERREUR : Le fichier alert_us30.py est introuvable dans le dépôt !"
+            echo "❌ ERREUR : alert_us30.py est introuvable !"
+            echo "Voici la liste des fichiers présents pour t'aider :"
+            ls -R
             exit 1
+          else
+            echo "✅ Fichier trouvé ici : $FILE_PATH"
+            python "$FILE_PATH"
           fi
-          echo "✅ Fichier trouvé : $FILE_PATH"
-          python "$FILE_PATH"
