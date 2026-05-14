@@ -1,5 +1,4 @@
 import os
-import requests
 import urllib.request
 from datetime import datetime, timedelta
 
