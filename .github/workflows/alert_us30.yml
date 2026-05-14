@@ -4,15 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '*/30 13-21 * * 1-5'
-  push:
-    branches:
-      - main
 
 jobs:
-  send-alert:
+  run-script:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python 3.9
@@ -20,21 +17,16 @@ jobs:
         with:
           python-version: "3.9"
 
- - name: Run alert
+      - name: Run Alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run:
+        run: |
           echo "🔍 Recherche du fichier alert_us30.py..."
-          # Cherche le fichier dans tout le projet
           FILE_PATH=$(find . -name "alert_us30.py" -print -quit)
-          
           if [ -z "$FILE_PATH" ]; then
-            echo "❌ ERREUR : alert_us30.py est introuvable !"
-            echo "Voici la liste des fichiers présents pour t'aider :"
+            echo "❌ Fichier introuvable !"
             ls -R
             exit 1
-          else
-            echo "✅ Fichier trouvé ici : $FILE_PATH"
-            python "$FILE_PATH"
           fi
+          python "$FILE_PATH"
