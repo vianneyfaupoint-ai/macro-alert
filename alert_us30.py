@@ -1,7 +1,7 @@
 import os
 import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import urllib.request
+from datetime import datetime, timedelta
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
