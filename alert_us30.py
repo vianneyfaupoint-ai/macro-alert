@@ -1,7 +1,7 @@
 import os
-import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import json
+import urllib.request
+from datetime import datetime, timedelta
 
 # Récupération des secrets GitHub
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -141,20 +141,26 @@ def build_message(events):
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
+    data = json.dumps({
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
         "parse_mode": "Markdown",
         "disable_web_page_preview": True
-    }
-    requests.post(url, json=payload, timeout=10)
+    }).encode('utf-8')
+    
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req) as response:
+        return response.getcode() == 200
 
 def main():
-    print("Démarrage du script...")
-    events = get_events()
-    message = build_message(events)
-    send_telegram(message)
-    print("Alerte envoyée avec succès !")
+    # Heure de Paris simplifiée (UTC+2)
+    now = datetime.utcnow() + timedelta(hours=2)
+    date_str = now.strftime("%d/%m/%Y à %H:%M")
+    
+    message = f"🚀 *US30 Macro Alert*\n\n✅ Le script a tourné avec succès le {date_str}.\n\nConfiguration propre sans dépendances externes."
+    
+    if send_telegram(message):
+        print("Alerte envoyée !")
 
 if __name__ == "__main__":
     main()
