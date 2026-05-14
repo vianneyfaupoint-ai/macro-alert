@@ -1,57 +1,68 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 
-# Configuration via les secrets GitHub
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
-CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-def get_macro_data():
-    url = "https://www.investing.com/economic-calendar/"
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    
+PARIS_TZ = ZoneInfo("Europe/Paris")
+NY_TZ = ZoneInfo("America/New_York")
+
+EVENT_EXPLAINERS = {
+    "non-farm": "Si Réel > CNS = US30 monte fort.",
+    "jobless claims": "Si Réel > CNS = Mauvais signe éco = Baissier.",
+    "unemployment": "Si Réel > CNS = Ralentissement éco = Baissier.",
+    "labor costs": "Si Réel > CNS = Risque inflation = Mauvais pour US30.",
+    "productivity": "Si Réel > CNS = Efficacité éco = Haussier.",
+    "construction spending": "Si Réel > CNS = Secteur immo solide = Haussier.",
+    "natural gas": "Si Réel > CNS = Offre abondante = Prix Gaz baisse.",
+    "consumer credit": "Si Réel > CNS = Les gens consomment = Haussier.",
+}
+
+def main():
     try:
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.content, 'lxml')
-        events = []
-        
-        # On cherche les lignes du calendrier
-        table = soup.find('table', id='economicCalendarData')
-        rows = table.find_all('tr', class_='js-event-item')
-        
-        for row in rows:
-            # On filtre pour n'avoir que les USA (drapeau américain) et Impact Fort (3 étoiles)
-            flag = row.find('td', class_='flagCur')
-            impact = row.find('td', class_='sentiment')
-            
-            if flag and "United States" in flag.get('title', '') and impact:
-                stars = impact.find_all('i', class_='grayFullBullishIcon')
-                if len(stars) >= 3:  # Impact Fort uniquement
-                    time = row.get('data-event-datetime')
-                    name = row.find('td', class_='event').text.strip()
-                    events.append(f"🕒 {time[11:16]} | 🔥 **{name}**")
-        
-        return events
-    except Exception as e:
-        return [f"Erreur lors de la récupération : {e}"]
+        r = requests.get("https://nfs.faireconomy.media/ff_calendar_thisweek.json", timeout=15)
+        data = r.json()
+    except: return
 
-def send_to_telegram(message):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    requests.post(url, json=payload)
+    today = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+    now_p = datetime.now(PARIS_TZ)
+    
+    lines = [f"🚀 *US30 Update — {now_p.strftime('%d/%m/%Y')}*", "_Vérification auto des résultats_", ""]
+    
+    found_any = False
+    for e in data:
+        if e.get("country") == "USD" and str(e.get("date", ""))[:10] == today:
+            found_any = True
+            name = e.get("title", "Event")
+            # Correction Heure : Si l'API envoie rien, on met l'heure US par défaut
+            time_val = e.get("time") if e.get("time") else "En cours"
+            actual = str(e.get("actual", "")).strip()
+            forecast = str(e.get("forecast", "")).strip()
+            
+            emoji = "🔴" if e.get("impact") == "High" else "🟡"
+            lines.append(f"{emoji} `{time_val}` | *{name}*")
+            
+            # Bloc de résultat ultra-visible
+            if actual and actual.lower() not in ["none", "null", ""]:
+                lines.append(f"   ┗ ✅ *RÉEL : {actual}* (Prévu: {forecast})")
+            elif forecast:
+                lines.append(f"   ┗ ⏳ Attendu: {forecast}")
+            
+            for kw, expl in EVENT_EXPLAINERS.items():
+                if kw in name.lower():
+                    lines.append(f"   >> _{expl}_")
+                    break
+    
+    if not found_any:
+        lines.append("📅 Aucun événement USD aujourd'hui.")
+
+    full_msg = "\n".join(lines) + "\n\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)\n🔗 [joncosoluce.fr](https://joncosoluce.fr/)"
+    
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
+                      json={"chat_id": TELEGRAM_CHAT_ID, "text": full_msg, "parse_mode": "Markdown", "disable_web_page_preview": True})
 
 if __name__ == "__main__":
-    paris_tz = pytz.timezone('Europe/Paris')
-    now = datetime.now(paris_tz).strftime("%d/%m/%Y %H:%M")
-    
-    data = get_macro_data()
-    
-    if data:
-        header = f"🚀 *ALERTE MACRO US30*\n📅 {now}\n\n*Événements US à fort impact :*\n"
-        full_message = header + "\n".join(data)
-    else:
-        full_message = f"📅 {now}\n✅ RAS : Aucun événement majeur aujourd'hui."
-        
-    send_to_telegram(full_message)
+    main()
