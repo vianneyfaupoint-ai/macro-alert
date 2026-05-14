@@ -1,11 +1,11 @@
 import os
-import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import json
+import urllib.request
+from datetime import datetime, timedelta
 
-# Récupération des secrets GitHub
-TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+# Récupération sécurisée des secrets
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # Fuseaux horaires
 PARIS_TZ = ZoneInfo("Europe/Paris")
@@ -139,22 +139,24 @@ def build_message(events):
     ]
     return "\n".join(lines)
 
-def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+def send_msg(text):
+    if not TOKEN or not CHAT_ID:
+        print("Erreur: Secrets manquants")
+        return
+    
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True
+        "chat_id": CHAT_ID,
+        "text": text,
+        "parse_mode": "Markdown"
     }
-    requests.post(url, json=payload, timeout=10)
-
-def main():
-    print("Démarrage du script...")
-    events = get_events()
-    message = build_message(events)
-    send_telegram(message)
-    print("Alerte envoyée avec succès !")
-
-if __name__ == "__main__":
-    main()
+    
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            if response.getcode() == 200:
+                print("✅ Message envoyé à Telegram !")
+    except Exception as e:
+        print(f"❌ Erreur envoi: {e}")
