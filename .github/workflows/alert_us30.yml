@@ -1,6 +1,8 @@
 name: alert_us30.yml
 
 on:
+push:
+    branches: [ "main" ]
   schedule:
     # Se lance toutes les 30 minutes de 13h00 à 22h00 UTC (15h-minuit Paris)
     # uniquement du lundi au vendredi.
