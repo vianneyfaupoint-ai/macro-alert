@@ -1,4 +1,4 @@
-name: Macro Alert US30
+name: alert_us30.yml
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
-     - name: Checkout code
+     - name: - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python 3.11
