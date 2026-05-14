@@ -7,9 +7,7 @@ from datetime import datetime, timedelta
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# Fuseaux horaires
-PARIS_TZ = ZoneInfo("Europe/Paris")
-NY_TZ = ZoneInfo("America/New_York")
+
 
 # Dictionnaire des explications pour le trading US30
 EVENT_EXPLAINERS = {
@@ -141,7 +139,7 @@ def build_message(events):
 
 def send_msg(text):
     if not TOKEN or not CHAT_ID:
-        print("Erreur: Secrets manquants")
+        print("Erreur : TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID manquant dans les secrets.")
         return
     
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -157,6 +155,22 @@ def send_msg(text):
     try:
         with urllib.request.urlopen(req) as response:
             if response.getcode() == 200:
-                print("✅ Message envoyé à Telegram !")
+                print("✅ Message envoyé avec succès à Telegram !")
     except Exception as e:
-        print(f"❌ Erreur envoi: {e}")
+        print(f"❌ Erreur lors de l'envoi : {e}")
+
+if __name__ == "__main__":
+    # Calcul de l'heure de Paris (UTC+2) compatible Python 3.9
+    now_paris = datetime.utcnow() + timedelta(hours=2)
+    heure_format = now_paris.strftime("%H:%M")
+    
+    print(f"Démarrage du script à {heure_format} (Heure Paris)...")
+    
+    message = (
+        f"🚀 *US30 Bot Alert*\n\n"
+        f"✅ Le script tourne parfaitement sur Python 3.9 !\n"
+        f"🕒 Heure d'exécution : `{heure_format}`\n"
+        f"🛠 Statut : Connexion établie."
+    )
+       
+    send_msg(message)
