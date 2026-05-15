@@ -72,10 +72,10 @@ def get_events():
         print(f"Erreur API: {ex}")
         return []
 
-def get_events_scrape():
+def get_events_forexfactory_scrape():
+    url = "https://www.forexfactory.com/calendar"
     try:
         from bs4 import BeautifulSoup
-        url = "https://www.forexfactory.com/calendar"
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             "Accept-Language": "en-US,en;q=0.9",
@@ -106,21 +106,44 @@ def get_events_scrape():
                     continue
                 name = event_cell.get_text(strip=True)
                 fc = row.select_one("td.calendar__forecast")
-                pr = row.select_one("td.calendar__previous")
+                ac = row.select_one("td.calendar__actual")
                 events.append({
                     "time_ny": current_time or "",
                     "name": name,
                     "high_impact": "high" in impact_class,
                     "forecast": fc.get_text(strip=True) if fc else "",
-                    "previous": pr.get_text(strip=True) if pr else "",
-                    "actual": "",
+                    "actual": ac.get_text(strip=True) if ac else "",
                 })
             except Exception:
                 continue
         return events
     except Exception as ex:
-        print(f"Scraping error: {ex}")
-        return None
+        print(f"Erreur scraping ForexFactory: {ex}")
+        return []
+
+
+def get_events():
+    url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json"
+    try:
+        resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        data = resp.json()
+        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        events = []
+        for e in data:
+            if e.get("country") == "USD" and e.get("date", "")[:10] == today_str:
+                events.append({
+                    "time_ny": e.get("time", ""),
+                    "name": e.get("title", ""),
+                    "high_impact": e.get("impact", "") == "High",
+                    "forecast": e.get("forecast", ""),
+                    "actual": e.get("actual", "")
+                })
+        return events
+    except Exception as ex:
+        print(f"Erreur API CDN: {ex}")
+        print("Fallback: ForexFactory scraping...")
+        return get_events_forexfactory_scrape()
 
 def convert_ny_to_paris(time_str):
     if not time_str: return "?"
