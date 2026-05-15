@@ -144,6 +144,87 @@ def get_events():
         print(f"Erreur API CDN: {ex}")
         print("Fallback: ForexFactory scraping...")
         return get_events_forexfactory_scrape()
+SP500_WATCH = [
+    "apple", "nvidia", "microsoft", "meta", "amazon",
+    "alphabet", "google", "tesla", "broadcom", "eli lilly",
+]
+
+def get_sp500_earnings():
+    """Retourne les earnings du jour qui impactent le S&P500"""
+    url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json"
+    try:
+        resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        data = resp.json()
+        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        hits = []
+        for e in data:
+            if e.get("date", "")[:10] != today_str:
+                continue
+            name_lower = e.get("title", "").lower()
+            if any(k in name_lower for k in SP500_WATCH):
+                hits.append(e.get("title", ""))
+        return hits
+    except Exception:
+        return []
+
+
+def build_sp500_block(events):
+    """Bloc S&P500 a ajouter dans le message"""
+    high = [e for e in events if e["high_impact"]]
+    medium = [e for e in events if not e["high_impact"]]
+    earnings = get_sp500_earnings()
+
+    lines = [
+        "",
+        "====================",
+        "US500 (S&P500)",
+        "",
+    ]
+
+    if not high and not medium:
+        lines.append("Aucun event macro majeur aujourd'hui")
+    else:
+        if high:
+            lines.append("FORT IMPACT")
+            lines.append("")
+            for e in high:
+                paris = get_time(e)
+                lines.append(f"  {paris} | {e['name']}")
+                details = []
+                if e["forecast"]:
+                    details.append(f"Cns: {e['forecast']}")
+                if e["previous"]:
+                    details.append(f"Prec: {e['previous']}")
+                if e["actual"]:
+                    details.append(f"Reel: {e['actual']}")
+                if details:
+                    lines.append("  " + " | ".join(details))
+                explainer = get_explainer(e["name"])
+                if explainer:
+                    lines.append(f"  -> {explainer}")
+                lines.append("")
+
+        if medium:
+            lines.append("IMPACT MOYEN")
+            lines.append("")
+            for e in medium:
+                paris = get_time(e)
+                cns = f" | Cns: {e['forecast']}" if e["forecast"] else ""
+                lines.append(f"  {paris} | {e['name']}{cns}")
+                explainer = get_explainer(e["name"])
+                if explainer:
+                    lines.append(f"  -> {explainer}")
+            lines.append("")
+
+    if earnings:
+        lines.append("EARNINGS DU JOUR")
+        lines.append("")
+        for name in earnings:
+            lines.append(f"  - {name}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 def convert_ny_to_paris(time_str):
     if not time_str: return "?"
@@ -183,6 +264,8 @@ def build_message(events):
     
     # Pied de page avec liens
     lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
+    sp500_block = build_sp500_block(events)
+    lines.append(sp500_block)
     return "\n".join(lines)
 
 def main():
