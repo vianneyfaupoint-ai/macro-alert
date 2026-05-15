@@ -181,6 +181,24 @@ def get_events():
         print(f"Erreur FMP: {ex}")
         return []
         
+def get_market_headlines():
+    try:
+        url = "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"
+        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        from xml.etree import ElementTree as ET
+        root = ET.fromstring(resp.content)
+        items = root.findall(".//item")
+        headlines = []
+        for item in items[:4]:
+            title = item.find("title")
+            if title is not None and title.text:
+                headlines.append(title.text.strip())
+        return headlines
+    except Exception as ex:
+        print(f"Erreur headlines: {ex}")
+        return []
+
 SP500_WATCH = [
     "apple", "nvidia", "microsoft", "meta", "amazon",
     "alphabet", "google", "tesla", "broadcom", "eli lilly",
@@ -298,7 +316,13 @@ def build_message(events):
             exp = get_explainer(e["name"])
             if exp: lines.append(f"  >> _{exp}_")
         lines.append("")
+    headlines = get_market_headlines()
     
+if headlines:
+    lines.append("\n📰 Actu US30 du jour")
+    for h in headlines:
+        lines.append(f"  - {h}")
+        
     # Pied de page avec liens
     lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
     sp500_block = build_sp500_block(events)
