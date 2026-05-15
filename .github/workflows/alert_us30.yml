@@ -1,19 +1,17 @@
 name: alert_us30.yml
 
 on:
-push:
+  push:
     branches: [ "main" ]
   schedule:
-    # Se lance toutes les 30 minutes de 13h00 à 22h00 UTC (15h-minuit Paris)
-    # uniquement du lundi au vendredi.
     - cron: '*/30 13-21 * * 1-5'
-  workflow_dispatch: # Permet de le lancer manuellement pour tester
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
-     - name: - name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python 3.11
@@ -24,6 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install requests beautifulsoup4 lxml pytz
+
       - name: Run Alert Script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
