@@ -334,7 +334,13 @@ if headlines:
     lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
     sp500_block = build_sp500_block(events)
     lines.append(sp500_block)
+    
+    
+    
     return "\n".join(lines)
+
+
+
 
 def main():
     print("Démarrage du bot...")
