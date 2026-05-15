@@ -145,7 +145,8 @@ def get_events():
         print("Fallback: ForexFactory scraping...")
         return get_events_forexfactory_scrape()
 
-FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
+FMP_API_KEY = os.environ.get("FMP_API_KEY") or os.environ.get("fmp_api_key") or ""
+print(f"FMP key present: {bool(FMP_API_KEY)} / longueur: {len(FMP_API_KEY)}")
 
 def get_events():
     url = f"https://financialmodelingprep.com/stable/economic-calendar?apikey={os.environ.get('FMP_API_KEY', '')}"    
