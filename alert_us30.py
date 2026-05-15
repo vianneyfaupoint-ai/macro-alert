@@ -50,28 +50,6 @@ def get_explainer(event_name):
     return None
 
 
-def get_events():
-    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-    try:
-        resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
-        data = resp.json()
-        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
-        events = []
-        for e in data:
-            if e.get("country") == "USD" and e.get("date", "")[:10] == today_str:
-                events.append({
-                    "time_ny": e.get("time", ""),
-                    "name": e.get("title", ""),
-                    "high_impact": e.get("impact", "") == "High",
-                    "forecast": e.get("forecast", ""),
-                    "actual": e.get("actual", "")
-                })
-        return events
-    except Exception as ex:
-        print(f"Erreur API: {ex}")
-        return []
-
 def get_events_forexfactory_scrape():
     url = "https://www.forexfactory.com/calendar"
     try:
@@ -126,10 +104,10 @@ def get_events():
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=30, headers={
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Referer": "https://www.forexfactory.com/",
-})
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Referer": "https://www.forexfactory.com/",
+        })
         resp.raise_for_status()
         data = resp.json()
         today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
@@ -149,38 +127,7 @@ def get_events():
         print("Fallback: ForexFactory scraping...")
         return get_events_forexfactory_scrape()
 
-FMP_API_KEY = os.environ.get("FMP_API_KEY") or os.environ.get("fmp_api_key") or ""
-print(f"FMP key present: {bool(FMP_API_KEY)} / longueur: {len(FMP_API_KEY)}")
 
-def get_events():
-    url = f"https://financialmodelingprep.com/api/v3/economic_calendar?apikey={FMP_API_KEY}"
-    try:
-        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
-        resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
-        data = resp.json()
-        events = []
-        for e in data:
-            if e.get("country") != "US":
-                continue
-            if e.get("date", "")[:10] != today_str:
-                continue
-            impact = e.get("impact", "")
-            if impact not in ["High", "Medium"]:
-                continue
-            events.append({
-                "time_ny": e.get("time", "") or e.get("date", "")[11:16],
-                "name": e.get("event", ""),
-                "high_impact": impact == "High",
-                "forecast": str(e.get("estimate", "")) if e.get("estimate") is not None else "",
-                "previous": str(e.get("previous", "")) if e.get("previous") is not None else "",
-                "actual": str(e.get("actual", "")) if e.get("actual") is not None else "",
-            })
-        return events
-    except Exception as ex:
-        print(f"Erreur FMP: {ex}")
-        return []
-        
 def get_market_headlines():
     try:
         url = "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"
@@ -199,14 +146,15 @@ def get_market_headlines():
         print(f"Erreur headlines: {ex}")
         return []
 
+
 SP500_WATCH = [
     "apple", "nvidia", "microsoft", "meta", "amazon",
     "alphabet", "google", "tesla", "broadcom", "eli lilly",
 ]
 
+
 def get_sp500_earnings():
-    """Retourne les earnings du jour qui impactent le S&P500"""
-    url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json"
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
@@ -225,17 +173,11 @@ def get_sp500_earnings():
 
 
 def build_sp500_block(events):
-    """Bloc S&P500 a ajouter dans le message"""
     high = [e for e in events if e["high_impact"]]
     medium = [e for e in events if not e["high_impact"]]
     earnings = get_sp500_earnings()
 
-    lines = [
-        "",
-        "====================",
-        "US500 (S&P500)",
-        "",
-    ]
+    lines = ["", "====================", "US500 (S&P500)", ""]
 
     if not high and not medium:
         lines.append("Aucun event macro majeur aujourd'hui")
@@ -244,14 +186,12 @@ def build_sp500_block(events):
             lines.append("FORT IMPACT")
             lines.append("")
             for e in high:
-                paris = get_time(e)
+                paris = convert_ny_to_paris(e["time_ny"])
                 lines.append(f"  {paris} | {e['name']}")
                 details = []
-                if e["forecast"]:
+                if e.get("forecast"):
                     details.append(f"Cns: {e['forecast']}")
-                if e["previous"]:
-                    details.append(f"Prec: {e['previous']}")
-                if e["actual"]:
+                if e.get("actual"):
                     details.append(f"Reel: {e['actual']}")
                 if details:
                     lines.append("  " + " | ".join(details))
@@ -259,13 +199,12 @@ def build_sp500_block(events):
                 if explainer:
                     lines.append(f"  -> {explainer}")
                 lines.append("")
-
         if medium:
             lines.append("IMPACT MOYEN")
             lines.append("")
             for e in medium:
-                paris = get_time(e)
-                cns = f" | Cns: {e['forecast']}" if e["forecast"] else ""
+                paris = convert_ny_to_paris(e["time_ny"])
+                cns = f" | Cns: {e['forecast']}" if e.get("forecast") else ""
                 lines.append(f"  {paris} | {e['name']}{cns}")
                 explainer = get_explainer(e["name"])
                 if explainer:
@@ -281,8 +220,10 @@ def build_sp500_block(events):
 
     return "\n".join(lines)
 
+
 def convert_ny_to_paris(time_str):
-    if not time_str: return "?"
+    if not time_str:
+        return "?"
     try:
         now_ny = datetime.now(NY_TZ)
         t_clean = time_str.lower().replace(" ", "")
@@ -310,53 +251,38 @@ def build_message(events):
         for e in events:
             paris = convert_ny_to_paris(e["time_ny"])
             emoji = "🔴" if e["high_impact"] else "🟡"
-            res = f" | ✅ *Réel: {e['actual']}*" if e['actual'] else ""
-            cns = f" (cns: {e['forecast']})" if e['forecast'] and not e['actual'] else ""
-            lines.append(f"{emoji} `{paris}` | {e['name']}{cns}{res}")
+            res = f" | Reel: {e['actual']}" if e.get('actual') else ""
+            cns = f" (cns: {e['forecast']})" if e.get('forecast') and not e.get('actual') else ""
+            lines.append(f"{emoji} {paris} | {e['name']}{cns}{res}")
             exp = get_explainer(e["name"])
-            if exp: lines.append(f"  >> _{exp}_")
+            if exp:
+                lines.append(f"  >> {exp}")
         lines.append("")
-        
 
+    headlines = get_market_headlines()
+    if headlines:
+        lines.append("📰 Actu US30 du jour")
+        for h in headlines:
+            lines.append(f"  - {h}")
+        lines.append("")
 
-
-headlines = get_market_headlines()
-
-
-
-
-if headlines:
-    lines.append("\n📰 Actu US30 du jour")
-    for h in headlines:
-        lines.append(f"  - {h}")
-        
-    
-    
-    
-    
-    # Pied de page avec liens
-     lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
-     sp500_block = build_sp500_block(events)
-     lines.append(sp500_block)
-    
-    
-    
+    lines.append("🗞 Clair Tiktok : Guerre / Géopolitique (https://www.tiktok.com/@clair.officiel)")
+    sp500_block = build_sp500_block(events)
+    lines.append(sp500_block)
     return "\n".join(lines)
-
-
 
 
 def main():
     print("Démarrage du bot...")
     events = get_events()
     message = build_message(events)
-    
+
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {
-            "chat_id": TELEGRAM_CHAT_ID, 
-            "text": message, 
-            "parse_mode": "Markdown", 
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown",
             "disable_web_page_preview": True
         }
         r = requests.post(url, json=payload, timeout=10)
@@ -365,7 +291,8 @@ def main():
         else:
             print(f"Erreur Telegram: {r.text}")
     else:
-        print("Erreur: Secrets TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID manquants.")
+        print("Erreur: Secrets manquants.")
+
 
 if __name__ == "__main__":
     main()
