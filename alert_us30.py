@@ -330,10 +330,14 @@ if headlines:
     for h in headlines:
         lines.append(f"  - {h}")
         
+    
+    
+    
+    
     # Pied de page avec liens
-    lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
-    sp500_block = build_sp500_block(events)
-    lines.append(sp500_block)
+     lines.append("\n🗞 *Clair Tiktok* : [Guerre / Géopolitique](https://www.tiktok.com/@clair.officiel)")
+     sp500_block = build_sp500_block(events)
+     lines.append(sp500_block)
     
     
     
