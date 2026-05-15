@@ -144,6 +144,38 @@ def get_events():
         print(f"Erreur API CDN: {ex}")
         print("Fallback: ForexFactory scraping...")
         return get_events_forexfactory_scrape()
+
+FMP_API_KEY = os.environ["FMP_API_KEY"]
+
+def get_events():
+    url = f"https://financialmodelingprep.com/stable/economic-calendar?apikey={FMP_API_KEY}"
+    try:
+        today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        data = resp.json()
+        events = []
+        for e in data:
+            if e.get("country") != "US":
+                continue
+            if e.get("date", "")[:10] != today_str:
+                continue
+            impact = e.get("impact", "")
+            if impact not in ["High", "Medium"]:
+                continue
+            events.append({
+                "time_ny": e.get("time", "") or e.get("date", "")[11:16],
+                "name": e.get("event", ""),
+                "high_impact": impact == "High",
+                "forecast": str(e.get("estimate", "")) if e.get("estimate") is not None else "",
+                "previous": str(e.get("previous", "")) if e.get("previous") is not None else "",
+                "actual": str(e.get("actual", "")) if e.get("actual") is not None else "",
+            })
+        return events
+    except Exception as ex:
+        print(f"Erreur FMP: {ex}")
+        return []
+        
 SP500_WATCH = [
     "apple", "nvidia", "microsoft", "meta", "amazon",
     "alphabet", "google", "tesla", "broadcom", "eli lilly",
