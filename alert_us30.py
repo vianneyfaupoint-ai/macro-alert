@@ -72,7 +72,6 @@ def get_events():
         print(f"Erreur API: {ex}")
         return []
 
-
 def get_events_scrape():
     try:
         from bs4 import BeautifulSoup
@@ -122,7 +121,6 @@ def get_events_scrape():
     except Exception as ex:
         print(f"Scraping error: {ex}")
         return None
-
 
 def convert_ny_to_paris(time_str):
     if not time_str: return "?"
