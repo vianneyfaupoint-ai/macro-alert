@@ -149,7 +149,7 @@ FMP_API_KEY = os.environ.get("FMP_API_KEY") or os.environ.get("fmp_api_key") or 
 print(f"FMP key present: {bool(FMP_API_KEY)} / longueur: {len(FMP_API_KEY)}")
 
 def get_events():
-    url = f"https://financialmodelingprep.com/stable/economic-calendar?apikey={FMP_API_KEY}"
+    url = f"https://financialmodelingprep.com/api/v3/economic_calendar?apikey={FMP_API_KEY}"
     try:
         today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
         resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
