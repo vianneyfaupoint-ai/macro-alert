@@ -145,10 +145,10 @@ def get_events():
         print("Fallback: ForexFactory scraping...")
         return get_events_forexfactory_scrape()
 
-FMP_API_KEY = os.environ["FMP_API_KEY"]
+FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 
 def get_events():
-    url = f"https://financialmodelingprep.com/stable/economic-calendar?apikey={FMP_API_KEY}"
+    url = f"https://financialmodelingprep.com/stable/economic-calendar?apikey={os.environ.get('FMP_API_KEY', '')}"    
     try:
         today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
         resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
