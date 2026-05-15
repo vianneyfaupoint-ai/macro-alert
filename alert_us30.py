@@ -316,8 +316,8 @@ def build_message(events):
             exp = get_explainer(e["name"])
             if exp: lines.append(f"  >> _{exp}_")
         lines.append("")
-    headlines = get_market_headlines()
-    
+        
+headlines = get_market_headlines()
 if headlines:
     lines.append("\n📰 Actu US30 du jour")
     for h in headlines:
