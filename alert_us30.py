@@ -57,7 +57,7 @@ def get_events_forexfactory_cdn():
     ]
     for url in urls:
         try:
-            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
             resp.raise_for_status()
             data = resp.json()
             today_str = datetime.now(NY_TZ).strftime("%Y-%m-%d")
@@ -89,7 +89,7 @@ def get_events_scrape():
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             "Accept-Language": "en-US,en;q=0.9",
         }
-        resp = requests.get(url, headers=headers, timeout=20)
+        resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
         events = []
@@ -181,12 +181,6 @@ def build_message(events):
         "",
     ]
 
-    if not events:
-        lines += [
-            "Aucun event macro majeur aujourd'hui",
-            "Seance pilotee par la geopolitique",
-            "Surveiller : Iran - Detroit - Petrole - Trump",
-        ]
     else:
         if high:
             lines.append("--- FORT IMPACT ---")
@@ -217,10 +211,7 @@ def build_message(events):
                 if explainer:
                     lines.append(f"  >> {explainer}")
             lines.append("")
-# AJOUT DES LIENS ICI
-        "🗞 *Flux Live* : [Guerre / Géopolitique](https://news.google.com/search?q=guerre) · [Trump News](https://news.google.com/search?q=Trump)",
-        "",
-    ]
+
     return "\n".join(lines)
 
 
@@ -267,21 +258,7 @@ def build_message(events):
 
     lines = [f"🚀 *US30 Update — {date_str}*", "_Heure de Paris_", ""]
 
-    if not events:
-        lines.append("📅 Aucun event macro majeur aujourd'hui")
-    else:
-        lines.append("📊 *CALENDRIER ÉCO*")
-        for e in events:
-            paris = convert_ny_to_paris(e["time_ny"], e["name"])
-            actual_val = str(e.get('actual', '')).strip()
-            res = f" | ✅ *Réel: {actual_val}*" if actual_val else ""
-            cns = f" (cns: {e['forecast']})" if e.get('forecast') and not actual_val else ""
-            emoji = "🔴" if e.get('impact') == "High" else "🟡"
-            lines.append(f"{emoji} `{paris}` | {e['name']}{cns}{res}")
-            exp = get_explainer(e["name"])
-            if exp: lines.append(f"  >> _{exp}_")
-        lines.append("")
-            
+           
     return "\n".join(lines)
 
 def main():
