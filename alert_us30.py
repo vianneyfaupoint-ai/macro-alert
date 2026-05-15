@@ -51,7 +51,7 @@ def get_explainer(event_name):
 
 
 def get_events():
-    url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json"
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     try:
         resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
