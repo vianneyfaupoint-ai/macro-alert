@@ -259,8 +259,6 @@ def build_message(events):
     lines = [f"🚀 *US30 Update — {date_str}*", "_Heure de Paris_", ""]
 
            
-    return "\n".join(lines)
-
 def main():
     events = get_events()
     message = build_message(events)
