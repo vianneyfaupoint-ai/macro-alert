@@ -266,8 +266,8 @@ def build_message(events):
             lines.append(f"  - {h}")
         lines.append("")
 
-    lines.append("🗞 Clair Tiktok : Guerre / Géopolitique (https://www.tiktok.com/@clair.officiel)"
-    lines.append("🗞 Clair Tiktok : US / Horaires (https://www.forexfactory.com/)"  
+    lines.append("🗞 Clair Tiktok : Guerre / Géopolitique (https://www.tiktok.com/@clair.officiel")
+    lines.append("🗞 Informations : US / Horaires (https://www.forexfactory.com")  
 
                  
     sp500_block = build_sp500_block(events)
