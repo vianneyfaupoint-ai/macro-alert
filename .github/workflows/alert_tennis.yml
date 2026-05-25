@@ -1,0 +1,31 @@
+name: 🎾 Tennis Daily Alert
+
+on:
+  schedule:
+    # Tous les jours à 7h00 heure française (UTC+2 en été → 5h UTC)
+    - cron: "0 5 * * *"
+  workflow_dispatch: # permet de lancer manuellement depuis GitHub
+
+jobs:
+  tennis-alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install anthropic requests
+
+      - name: Run tennis alert
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_TOKEN:    ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python tennis_alert.py
