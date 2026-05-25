@@ -1,6 +1,5 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 import pytz
 
@@ -9,45 +8,98 @@ TELEGRAM_CHAT = os.environ['TELEGRAM_CHAT_ID']
 PARIS_TZ = pytz.timezone('Europe/Paris')
 TODAY = datetime.now(PARIS_TZ)
 TODAY_STR = TODAY.strftime('%d/%m/%Y')
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0'}
+
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36',
+    'Accept-Language': 'fr-FR,fr;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+}
 
 
-def fetch_espn(tour):
+def fetch_google_tennis():
     matches = []
     try:
-        url = 'https://site.api.espn.com/apis/site/v2/sports/tennis/' + tour + '/scoreboard'
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        print('ESPN ' + tour + ': ' + str(r.status_code))
-        if r.status_code != 200:
-            return []
-        for ev in r.json().get('events', []):
-            comp = ev.get('competitions', [{}])[0]
-            cx = comp.get('competitors', [])
-            if len(cx) < 2:
-                continue
-            p1 = cx[0].get('athlete', {}).get('displayName', '?')
-            p2 = cx[1].get('athlete', {}).get('displayName', '?')
-            try:
-                dt = datetime.fromisoformat(ev.get('date', '').replace('Z', '+00:00'))
-                heure = dt.astimezone(PARIS_TZ).strftime('%H:%M')
-            except Exception:
-                heure = '?'
-            status = ev.get('status', {}).get('type', {}).get('description', '')
-            tournament = ev.get('season', {}).get('displayName', tour.upper())
-            matches.append({'p1': p1, 'p2': p2, 'time': heure, 'tournament': tournament, 'status': status})
+        from bs4 import BeautifulSoup
+        r = requests.get(
+            'https://www.google.com/search?q=tennis+roland+garros+scores+aujourd+hui&hl=fr&gl=FR',
+            headers=HEADERS, timeout=15)
+        print('Google: ' + str(r.status_code) + ' (' + str(len(r.text)) + ' chars)')
+        soup = BeautifulSoup(r.text, 'lxml')
+        for row in soup.find_all('div', class_=True):
+            text = row.get_text(' ', strip=True)
+            if ' vs ' in text.lower() or (' - ' in text and len(text) < 80):
+                if any(c.isdigit() for c in text):
+                    matches.append(text)
     except Exception as e:
-        print('ESPN error: ' + str(e))
+        print('Google error: ' + str(e))
     return matches
 
 
+def fetch_serpapi():
+    matches = []
+    try:
+        from bs4 import BeautifulSoup
+        queries = [
+            'https://www.google.com/search?q=roland+garros+2026+scores+du+jour&hl=fr&gl=FR',
+            'https://www.google.com/search?q=ATP+WTA+tennis+matchs+aujourd+hui+25+mai+2026&hl=fr&gl=FR',
+        ]
+        for url in queries:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            print('Google search: ' + str(r.status_code))
+            soup = BeautifulSoup(r.text, 'lxml')
+            for el in soup.select('[data-ved], .BNeawe, .r0bn4c, .rQMQod'):
+                text = el.get_text(' ', strip=True)
+                if len(text) > 5 and len(text) < 120:
+                    matches.append(text)
+            if matches:
+                break
+    except Exception as e:
+        print('Serpapi error: ' + str(e))
+    return matches
+
+
+def fetch_livescore():
+    matches = []
+    try:
+        from bs4 import BeautifulSoup
+        r = requests.get('https://www.livescore.com/en/tennis/', headers=HEADERS, timeout=15)
+        print('livescore: ' + str(r.status_code) + ' (' + str(len(r.text)) + ' chars)')
+        soup = BeautifulSoup(r.text, 'lxml')
+        current = 'Tennis'
+        for el in soup.find_all(['div', 'span', 'a']):
+            cls = ' '.join(el.get('class', []))
+            text = el.get_text(strip=True)
+            if not text or len(text) > 100:
+                continue
+            if 'tournament' in cls.lower() or 'competition' in cls.lower():
+                current = text
+            elif 'participant' in cls.lower() or 'name' in cls.lower():
+                if len(text) > 2:
+                    matches.append({'name': text, 'tournament': current})
+    except Exception as e:
+        print('livescore error: ' + str(e))
+    pairs = []
+    i = 0
+    while i < len(matches) - 1:
+        pairs.append({
+            'p1': matches[i]['name'],
+            'p2': matches[i+1]['name'],
+            'tournament': matches[i]['tournament'],
+            'time': '?',
+        })
+        i += 2
+    return pairs
+
+
 def fetch_tennis24():
+    from bs4 import BeautifulSoup
     matches = []
     try:
         r = requests.get('https://www.tennis24.com/', headers=HEADERS, timeout=15)
-        print('tennis24: ' + str(r.status_code))
+        print('tennis24: ' + str(r.status_code) + ' (' + str(len(r.text)) + ' chars)')
         soup = BeautifulSoup(r.text, 'lxml')
         current = 'Tennis'
-        for el in soup.select('.sportName.tennis > div')[:60]:
+        for el in soup.select('.sportName.tennis > div')[:80]:
             cls = el.get('class', [])
             if 'event__header' in cls:
                 t = el.get_text(strip=True)
@@ -56,50 +108,22 @@ def fetch_tennis24():
             elif any('event__match' in c for c in cls):
                 players = el.select('.event__participant')
                 time_el = el.select_one('.event__time')
+                score_el = el.select_one('.event__scores')
                 if len(players) >= 2:
+                    score = score_el.get_text(strip=True) if score_el else ''
                     matches.append({
                         'p1': players[0].get_text(strip=True),
                         'p2': players[1].get_text(strip=True),
                         'time': time_el.get_text(strip=True) if time_el else '?',
+                        'score': score,
                         'tournament': current,
-                        'status': '',
                     })
     except Exception as e:
         print('tennis24 error: ' + str(e))
     return matches
 
 
-def fetch_winamax_odds():
-    odds = {}
-    try:
-        h = {'User-Agent': HEADERS['User-Agent'], 'Referer': 'https://www.winamax.fr/'}
-        r = requests.get(
-            'https://www.winamax.fr/apiv1/sports/21/competitions?inPlay=false',
-            headers=h, timeout=10)
-        print('Winamax: ' + str(r.status_code))
-        if r.status_code != 200:
-            return odds
-        for comp in r.json().get('competitions', [])[:8]:
-            cid = comp.get('competitionId')
-            if not cid:
-                continue
-            r2 = requests.get(
-                'https://www.winamax.fr/apiv1/sports/21/competitions/' + str(cid) + '/matches',
-                headers=h, timeout=10)
-            if r2.status_code != 200:
-                continue
-            for m in r2.json().get('matches', []):
-                for tk, ok in [('team1Name', 'odds1'), ('team2Name', 'odds2')]:
-                    name = m.get(tk, '').lower()
-                    cote = m.get(ok)
-                    if name and cote:
-                        odds[name] = cote
-    except Exception as e:
-        print('Winamax error: ' + str(e))
-    return odds
-
-
-def build_message(matches, odds):
+def build_message(matches):
     titre = 'Tennis du jour ' + TODAY_STR
     lines = [titre, '']
     if not matches:
@@ -109,6 +133,9 @@ def build_message(matches, odds):
     current_tour = None
     seen = set()
     for m in matches:
+        if isinstance(m, str):
+            lines.append(m)
+            continue
         key = m.get('p1', '') + '-' + m.get('p2', '')
         if key in seen:
             continue
@@ -117,23 +144,13 @@ def build_message(matches, odds):
         if tour != current_tour:
             current_tour = tour
             lines.append('')
-            lines.append(tour)
+            lines.append('--- ' + tour + ' ---')
         p1 = m.get('p1', '?')
         p2 = m.get('p2', '?')
         heure = m.get('time', '?')
-        status = m.get('status', '')
-        c1 = odds.get(p1.lower()) or odds.get(p1.split()[-1].lower())
-        c2 = odds.get(p2.lower()) or odds.get(p2.split()[-1].lower())
-        if c1 and c2:
-            fav = p1 if c1 <= c2 else p2
-            best = min(c1, c2)
-            cote_str = ' | Favori: ' + fav + ' @ ' + str(round(best, 2))
-        else:
-            cote_str = ''
-        icon = '[LIVE] ' if 'Progress' in status else ''
-        lines.append(heure + ' ' + icon + p1 + ' vs ' + p2 + cote_str)
-    lines.append('')
-    lines.append('Source: ESPN / tennis24 / Winamax')
+        score = m.get('score', '')
+        score_str = ' (' + score + ')' if score else ''
+        lines.append(heure + ' | ' + p1 + ' vs ' + p2 + score_str)
     return chr(10).join(lines)
 
 
@@ -147,14 +164,13 @@ def send_telegram(text):
 
 if __name__ == '__main__':
     print('Matchs du ' + TODAY_STR + '...')
-    matches = fetch_espn('atp') + fetch_espn('wta')
-    print('ESPN total: ' + str(len(matches)))
+    matches = fetch_tennis24()
+    print('tennis24: ' + str(len(matches)))
     if not matches:
-        matches = fetch_tennis24()
-        print('tennis24 total: ' + str(len(matches)))
-    odds = fetch_winamax_odds()
-    print('Cotes: ' + str(len(odds)))
-    msg = build_message(matches, odds)
+        matches = fetch_livescore()
+        print('livescore: ' + str(len(matches)))
+    print('Total: ' + str(len(matches)))
+    msg = build_message(matches)
     print(msg)
     send_telegram(msg)
     print('Termine')
