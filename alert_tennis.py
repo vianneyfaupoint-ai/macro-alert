@@ -6,88 +6,59 @@ import pytz
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TELEGRAM_CHAT = os.environ['TELEGRAM_CHAT_ID']
 SERPAPI_KEY = os.environ['SERPAPI_KEY']
-
 PARIS_TZ = pytz.timezone('Europe/Paris')
-TODAY = datetime.now(PARIS_TZ)
-TODAY_STR = TODAY.strftime('%d/%m/%Y')
+TODAY_STR = datetime.now(PARIS_TZ).strftime('%d/%m/%Y')
 
 
-def fetch_tennis_google():
-    matches = []
-    try:
-        r = requests.get(
-            'https://serpapi.com/search',
-            params={
-                'q': 'tennis',
-                'hl': 'fr',
-                'gl': 'fr',
-                'api_key': SERPAPI_KEY,
-            },
-            timeout=20
-        )
-        print('SerpApi: ' + str(r.status_code))
-        data = r.json()
-        sports = data.get('sports_results', {})
-        print('sports_results keys: ' + str(list(sports.keys())))
-        games = sports.get('games', [])
-        print('games: ' + str(len(games)))
-        for game in games:
-            teams = game.get('teams', [])
-            if len(teams) >= 2:
-                p1 = teams[0].get('name', '?')
-                p2 = teams[1].get('name', '?')
-                s1 = str(teams[0].get('score', ''))
-                s2 = str(teams[1].get('score', ''))
-                score = s1 + ' - ' + s2 if s1 or s2 else ''
-                status = game.get('status', '')
-                tournament = game.get('tournament', game.get('league', 'Tennis'))
-                matches.append({
-                    'p1': p1, 'p2': p2,
-                    'score': score,
-                    'status': status,
-                    'tournament': tournament,
-                })
-    except Exception as e:
-        print('SerpApi error: ' + str(e))
-    return matches
+def fetch():
+    r = requests.get('https://serpapi.com/search', params={
+        'q': 'tennis',
+        'hl': 'fr',
+        'gl': 'fr',
+        'api_key': SERPAPI_KEY,
+    }, timeout=20)
+    print('SerpApi status: ' + str(r.status_code))
+    data = r.json()
+    sports = data.get('sports_results', {})
+    games = sports.get('games', [])
+    print('Matchs trouves: ' + str(len(games)))
+    return games
 
 
-def build_message(matches):
+def build(games):
     lines = ['Tennis du jour ' + TODAY_STR, '']
-    if not matches:
+    if not games:
         lines.append('Aucun match trouve.')
-        lines.append('Programme: https://www.rolandgarros.com/fr-fr/tableau')
         return chr(10).join(lines)
-    current_tour = None
-    for m in matches:
-        tour = m.get('tournament', 'Tennis')
-        if tour != current_tour:
-            current_tour = tour
+    current = None
+    for g in games:
+        teams = g.get('teams', [])
+        if len(teams) < 2:
+            continue
+        tournament = g.get('tournament', g.get('league', ''))
+        if tournament != current:
+            current = tournament
             lines.append('')
-            lines.append('--- ' + tour + ' ---')
-        p1 = m.get('p1', '?')
-        p2 = m.get('p2', '?')
-        score = m.get('score', '')
-        status = m.get('status', '')
-        score_str = ' (' + score + ')' if score else ''
-        status_str = ' [' + status + ']' if status else ''
-        lines.append(p1 + ' vs ' + p2 + score_str + status_str)
+            lines.append('--- ' + tournament + ' ---')
+        p1 = teams[0].get('name', '?')
+        p2 = teams[1].get('name', '?')
+        s1 = str(teams[0].get('score', ''))
+        s2 = str(teams[1].get('score', ''))
+        score = ' (' + s1 + '-' + s2 + ')' if s1 and s2 else ''
+        status = g.get('status', '')
+        st = ' [' + status + ']' if status else ''
+        lines.append(p1 + ' vs ' + p2 + score + st)
     return chr(10).join(lines)
 
 
-def send_telegram(text):
+def send(text):
     url = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
     for chunk in [text[i:i+4000] for i in range(0, len(text), 4000)]:
-        r = requests.post(url, data={'chat_id': TELEGRAM_CHAT, 'text': chunk})
-        r.raise_for_status()
+        requests.post(url, data={'chat_id': TELEGRAM_CHAT, 'text': chunk}).raise_for_status()
     print('Telegram OK')
 
 
-if __name__ == '__main__':
-    print('Matchs du ' + TODAY_STR + '...')
-    matches = fetch_tennis_google()
-    print('Total matchs: ' + str(len(matches)))
-    msg = build_message(matches)
-    print(msg)
-    send_telegram(msg)
-    print('Termine')
+games = fetch()
+msg = build(games)
+print(msg)
+send(msg)
