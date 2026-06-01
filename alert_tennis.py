@@ -17,11 +17,10 @@ def fetch():
         'gl': 'fr',
         'api_key': SERPAPI_KEY,
     }, timeout=20)
-    print('SerpApi status: ' + str(r.status_code))
+    print('SerpApi: ' + str(r.status_code))
     data = r.json()
-    sports = data.get('sports_results', {})
-    games = sports.get('games', [])
-    print('Matchs trouves: ' + str(len(games)))
+    games = data.get('sports_results', {}).get('games', [])
+    print('Matchs: ' + str(len(games)))
     return games
 
 
@@ -35,7 +34,7 @@ def build(games):
         teams = g.get('teams', [])
         if len(teams) < 2:
             continue
-        tournament = g.get('tournament', g.get('league', ''))
+        tournament = g.get('tournament', g.get('league', 'Tennis'))
         if tournament != current:
             current = tournament
             lines.append('')
